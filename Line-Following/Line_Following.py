@@ -1,4 +1,5 @@
 from picamera2 import Picamera2
+from libcamera import controls
 import cv2
 import numpy as np
 import time
@@ -36,7 +37,9 @@ def init():
     picam2.preview_configuration.align()
     picam2.configure("preview")
     picam2.start()  # Start camera preview
-    
+    ## Continous Auto Focus 
+    picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+
     frame_center = (picam2.preview_configuration.main.size[0] // 2 ,
                     picam2.preview_configuration.main.size[1] // 2)
 
