@@ -6,9 +6,6 @@ from PCA9685_MC import Motor_Controller
 
    # initate the servo motor 
 
-
-
-
 def init(): 
         """
         Initialize motor controller, encoder, mediapipe hands and camera 
