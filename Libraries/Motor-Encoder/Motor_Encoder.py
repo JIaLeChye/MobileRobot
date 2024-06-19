@@ -39,6 +39,8 @@ class Encoder:
                 print("All values initialized -- Motor_Encoder")
                 
             if self.ODISPLAY:
+                self.i2c = board.I2C()
+                self.oled = adafruit_ssd1306.SSD1306_I2C(128, 64, self.i2c, addr=OLED_addr)
                 print("OLED Display Enabled")
                 self.oled.fill(1)
                 self.oled.show()
@@ -52,17 +54,6 @@ class Encoder:
         """
         Set up GPIO pins and initialize encoder.
         """
-        GPIO.cleanup() # Clean up GPIO
-        GPIO.setmode(GPIO.BCM) # Set GPIO Mode to BCM
-        GPIO.setwarnings(False) 
-        GPIO.setup(self.LEFT_HALLSEN, GPIO.IN)
-        GPIO.setup(self.RIGHT_HALLSEN, GPIO.IN)
-        
-        if self.debug:
-            current_Mode = GPIO.getmode()
-            print("Current GPIO Mode:", current_Mode)
-            print(f"Setting up edge detection for pins: LEFT={self.LEFT_HALLSEN}, RIGHT={self.RIGHT_HALLSEN}")
-
         retry_count = 3
         while retry_count > 0:
             try:
@@ -70,9 +61,13 @@ class Encoder:
                 GPIO.setmode(GPIO.BCM) # Set GPIO Mode to BCM
                 GPIO.setwarnings(False) 
                 GPIO.setup(self.LEFT_HALLSEN, GPIO.IN)
-                GPIO.setup(self.RIGHT_HALLSEN, GPIO.IN)
-                GPIO.add_event_detect(self.LEFT_HALLSEN, GPIO.RISING, callback=self.left_update)
-                GPIO.add_event_detect(self.RIGHT_HALLSEN, GPIO.RISING, callback=self.right_update)
+                GPIO.setup(self.RIGHT_HALLSEN, GPIO.IN) 
+                if self.debug:
+                    current_Mode = GPIO.getmode()
+                    print("Current GPIO Mode:", current_Mode)
+                    print(f"Setting up edge detection for pins: LEFT={self.LEFT_HALLSEN}, RIGHT={self.RIGHT_HALLSEN}")
+                GPIO.add_event_detect(self.LEFT_HALLSEN, GPIO.BOTH, callback=self.left_update)
+                GPIO.add_event_detect(self.RIGHT_HALLSEN, GPIO.BOTH, callback=self.right_update)
                 if self.debug:
                     print("GPIO edge detection added successfully.")
                 break
@@ -106,9 +101,6 @@ class Encoder:
         """
         Read encoder values and calculate RPM.
         """
-        if not hasattr(self, 'setup_done'):
-            self.setup()
-            self.setup_done = True  # Flag to avoid repeated setup
         
         start_time = time.time()
         left_start_enc_val = self.left_enc_val
@@ -171,3 +163,4 @@ if __name__ == '__main__':
             time.sleep(1)
     except KeyboardInterrupt:
         enc.stop()
+        exit() 
