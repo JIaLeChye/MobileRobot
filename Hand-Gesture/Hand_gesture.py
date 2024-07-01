@@ -88,7 +88,7 @@ def main():
                 # Read frame from video capture
                 frame = cap.capture_array()
 
-                # Convert the BGR frame to RGB
+                # Convert the BGR frame to RGB 
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 # Detect hand landmarks using MediaPipe Hands
                 results = hands.process(frame_bgr)
