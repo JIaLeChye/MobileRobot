@@ -33,9 +33,6 @@ while True:
     
     # Start reading the webcam feed frame by frame.
     frame = picam2.capture_array()
-  
-    # Flip the frame horizontally (Not required)
-    frame = cv2.flip( frame, 1 ) 
     
     # Convert the BGR image to HSV image.
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
