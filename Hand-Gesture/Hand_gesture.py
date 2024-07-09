@@ -23,7 +23,14 @@ def init():
         cap = Picamera2(0)
         cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         cap.start()
-        #initialise the Motor Library
+
+        # Set Camera Position
+
+        horizontal = 0 # Channel 0
+        vertical = 1 # channel 1
+        Motor.servoPulse(horizontal, 600)
+        Motor.servoPulse(vertical, 1210)
+        
     
         
         
@@ -80,10 +87,6 @@ def main():
         init()
         global mp_hands, hands, cap, mp_drawing, Motor, enc 
         # Main loop for robot car control
-        horizontal = 0# Channel 0
-        vertical = 1 # channel 1
-        Motor.servoPulse(horizontal, 600)
-        Motor.servoPulse(vertical, 1210)
         while True:
                 # Read frame from video capture
                 frame = cap.capture_array()
