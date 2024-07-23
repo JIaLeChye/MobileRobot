@@ -29,9 +29,6 @@ print("Initialising Obstacle Detection")
 @blynk.on("connected")
 def blynk_connected():
 	print("Blynk server Conected")
-	
-	
-	
 
 	@blynk.on("V4")
 	def v4_write_handler(value):
@@ -44,14 +41,10 @@ def blynk_connected():
 	@blynk.on("V0")
 	def v0_write_handler(value):
 		# print('Current slider value: {}'.format(value[0]))
-		Obstacledetect = obstacleSens.distances()
 		VPin = int(value[0])
 		if VPin is not None:
-			if VPin == 1 and Obstacledetect[2] > 20:
+			if VPin == 1 :
 				Motor.Forward(Freq)
-			if Obstacledetect[2] <= 20:
-				print("Obstacle Detected in Front: %.2f " %Obstacledetect[2])
-				Motor.Brake()
 			if VPin == 0:
 				Motor.Brake()
 		else:
@@ -64,13 +57,14 @@ def blynk_connected():
 		if VPin is not None:
 			ReverseDetect = ReverseSens.status()
 			# print(VPin, ReverseDetect)
-			if VPin == 1 and ReverseDetect == 0:
-				Motor.Backward(Freq)
-			elif ReverseDetect == 1:
+			if ReverseDetect == 1: 
 				Motor.Brake()
-				print("Obstacle Behind Detected")
+				print("CAUTION Obstacle Behind !")
 			else:
-				Motor.Brake()
+				if VPin == 1 :
+					Motor.Backward(Freq)	
+				else:
+					Motor.Brake()
 		else:
 			pass
 	@blynk.on("V2")
@@ -121,24 +115,34 @@ def blynk_connected():
 
 def main():
 	while True: 
-		left,front,right = obstacleSens.distances()
-		#print("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
-		# if front < 20 or left < 20 or right < 20:
-		# 	Motor.Brake()
-		# 	if front < 20:
-		# 		print("CAUTION OBSTACLE AT THE FRONT")
-		# 		print("DISTANCE: "+ str(front))
-		# 	if left < 20:
-		# 		print("CAUTION OBSTACLE AT THE LEFT")
-		# 		print("DISTANCE: "+ str(left))  
-		# 	if right < 20:
-		# 		print("CAUTION OBSTACLE AT THE RIGHT")
-		# 		print("DISTANCE: "+ str(right))
-				
 		enc.encoder()
+		left,front,right = obstacleSens.distances()
+		Reverse = ReverseSens.status() 
+		#print("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
+		
+		# print ("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
+		if (left and  front and right) is not None:
+			if front < 20 or left < 20 or right < 20 or Reverse == 1 :
+				Motor.Brake()
+				if front < 20:
+					print("CAUTION OBSTACLE AT THE FRONT")
+					print("DISTANCE: "+ str(front))
+				if left < 20:
+					print("CAUTION OBSTACLE AT THE LEFT")
+					print("DISTANCE: "+ str(left))  
+				if right < 20:
+					print("CAUTION OBSTACLE AT THE RIGHT")
+					print("DISTANCE: "+ str(right))	
+				if Reverse == 1:
+					print("CAUTION OBSTACLE AT THE BACK")
+				
+			 
+				
+		else:
+			print("Error Fetching Sensor Value")
+		# time.sleep(0.2)
 		blynk.run()
 		blynk.virtual_write(8, Freq)
-		# time.sleep(0.2)
 		status = blynk.state
 		if status == 0: 
 			print("Reconnecting...")
