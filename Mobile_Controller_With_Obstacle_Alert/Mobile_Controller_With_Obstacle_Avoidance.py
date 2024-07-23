@@ -8,7 +8,7 @@ AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
 	
-enc = Encoder(ODISPLAY= True)
+enc = Encoder()
 print("Initializing Motor Controller...")
 Motor = Motor_Controller()
 print("Motor Controller Initialized")
@@ -30,6 +30,8 @@ print("Initialising Obstacle Detection")
 def blynk_connected():
 	print("Blynk server Conected")
 	
+	
+	
 
 	@blynk.on("V4")
 	def v4_write_handler(value):
@@ -42,11 +44,15 @@ def blynk_connected():
 	@blynk.on("V0")
 	def v0_write_handler(value):
 		# print('Current slider value: {}'.format(value[0]))
+		Obstacledetect = obstacleSens.distances()
 		VPin = int(value[0])
 		if VPin is not None:
-			if VPin == 1 :
+			if VPin == 1 and Obstacledetect[2] > 20:
 				Motor.Forward(Freq)
-			if VPin == 0 :
+			if Obstacledetect[2] <= 20:
+				print("Obstacle Detected in Front: %.2f " %Obstacledetect[2])
+				Motor.Brake()
+			if VPin == 0:
 				Motor.Brake()
 		else:
 			pass
@@ -60,7 +66,7 @@ def blynk_connected():
 			# print(VPin, ReverseDetect)
 			if VPin == 1 and ReverseDetect == 0:
 				Motor.Backward(Freq)
-			elif VPin == 1 and ReverseDetect == 1:
+			elif ReverseDetect == 1:
 				Motor.Brake()
 				print("Obstacle Behind Detected")
 			else:

@@ -117,7 +117,7 @@ class Ultrasonic:
 
 if __name__ == "__main__":
     try:
-        ultrasonic = Ultrasonic(debug=True)
+        ultrasonic = Ultrasonic()
         while True: 
             Left, Front, Right = ultrasonic.distances()
             if (Left and Front and Right) is not None: 
