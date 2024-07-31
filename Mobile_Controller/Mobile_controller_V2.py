@@ -8,7 +8,7 @@ AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
 	
-# enc = Encoder(ODISPLAY= True)
+enc = Encoder(ODISPLAY= False)
 print("Initializing Motor Controller...")
 Motor = Motor_Controller()
 print("Motor Controller Initialized")
@@ -18,6 +18,7 @@ Freq = 0
 blynk.virtual_write(4,0)
 Motor.Brake()
 		
+
 
 
 

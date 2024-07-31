@@ -7,17 +7,15 @@ from IRSens import IRsens
 AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
-	
-enc = Encoder()
+
+enc = Encoder(ODISPLAY=False)
 print("Initializing Motor Controller...")
 Motor = Motor_Controller()
 print("Motor Controller Initialized")
 blynk = BlynkLib.Blynk(AUTH) 
 print("Blynk Connection Established")
-Freq = 0
-blynk.virtual_write(4,Freq)
 Motor.Brake()
-obstacleSens = Ultrasonic()
+obstacleSens = Ultrasonic(debug=False)
 ReverseSens = IRsens()
 print("Initialising Obstacle Detection")
 
@@ -25,7 +23,9 @@ print("Initialising Obstacle Detection")
 
 
 
- 
+Freq = 0
+blynk.virtual_write(4,Freq)
+
 @blynk.on("connected")
 def blynk_connected():
 	print("Blynk server Conected")
@@ -114,11 +114,15 @@ def blynk_connected():
 	blynk.sync_virtual(0,1,2,3,4)
 
 def main():
+	
 	while True: 
+		blynk.run()
 		enc.encoder()
 		left,front,right = obstacleSens.distances()
 		Reverse = ReverseSens.status() 
-		#print("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
+		# print("Reverse: "+ str(Reverse))
+
+		# print("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
 		
 		# print ("Left: %.2f, Front: %.2f, Right: %.2f" % (left, front, right))
 		if (left and  front and right) is not None:
@@ -134,14 +138,12 @@ def main():
 					print("CAUTION OBSTACLE AT THE RIGHT")
 					print("DISTANCE: "+ str(right))	
 				if Reverse == 1:
-					print("CAUTION OBSTACLE AT THE BACK")
-				
-			 
-				
+					print("CAUTION OBSTACLE AT THE BACK")	
 		else:
 			print("Error Fetching Sensor Value")
+			Motor.Brake()
+
 		# time.sleep(0.2)
-		blynk.run()
 		blynk.virtual_write(8, Freq)
 		status = blynk.state
 		if status == 0: 

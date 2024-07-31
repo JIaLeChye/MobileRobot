@@ -4,7 +4,7 @@ from picamera2 import Picamera2
 from Motor_Encoder import Encoder 
 from PCA9685_MC import Motor_Controller
 
-   # initate the servo motor 
+  
 
 def init(): 
         """
@@ -24,13 +24,7 @@ def init():
         cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         cap.start()
 
-        # Set Camera Position
-
-        horizontal = 0 # Channel 0
-        vertical = 1 # channel 1
-        Motor.servoPulse(horizontal, 600)
-        Motor.servoPulse(vertical, 1210)
-        
+   
     
         
         
