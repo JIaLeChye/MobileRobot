@@ -23,7 +23,7 @@ print("Initialising Obstacle Detection")
 
 
 
-Freq = 0
+Freq = 0-0
 blynk.virtual_write(4,Freq)
 
 @blynk.on("connected")
@@ -54,14 +54,8 @@ def blynk_connected():
 	def v1_write_handler(value):
 		# print('Current slider value: {}'.format(value[0]))
 		VPin = int(value[0])
-		if VPin is not None:
-			ReverseDetect = ReverseSens.status()
-			# print(VPin, ReverseDetect)
-			if ReverseDetect == 1: 
-				Motor.Brake()
-				print("CAUTION Obstacle Behind !")
-			else:
-				if VPin == 1 :
+		if VPin is not None: 
+				if VPin == 1 : 
 					Motor.Backward(Freq)	
 				else:
 					Motor.Brake()
