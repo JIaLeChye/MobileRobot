@@ -108,16 +108,12 @@ def main():
 
                     # Exit loop on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                        Motor.servoPulse(1, 0)
-                        Motor.servoPulse(0, 0)
                         break
 try:
         if __name__ == '__main__':
                 main()
 except KeyboardInterrupt:
         cv2.destroyAllWindows()
-        Motor.servoPulse(1, 0)
-        Motor.servoPulse(0, 0)
         Motor.Brake()
         enc.stop()
 

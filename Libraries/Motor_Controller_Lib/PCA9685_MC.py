@@ -7,7 +7,7 @@ import time # Import the time Library
 class Motor_Controller:
     # Declare all the Variables 
     """
-    This Library uses the PCA9685 I2C PWM to simulate the PWM Frequency. 
+    This Library uses the PCA9685 I2C PWM Module to simulate the PWM Frequency. 
     Dependency: PCA9685
               : Time 
     
