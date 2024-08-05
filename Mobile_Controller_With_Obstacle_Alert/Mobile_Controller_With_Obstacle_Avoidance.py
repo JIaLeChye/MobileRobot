@@ -4,7 +4,7 @@ import BlynkLib
 import time
 from Ultrasonic_sens import Ultrasonic 
 from IRSens import IRsens 
-AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
+AUTH = "REPLACE-TO-YOUR-AUTH-CODE"
 
 
 
