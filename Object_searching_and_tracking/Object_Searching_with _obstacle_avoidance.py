@@ -66,7 +66,7 @@ tracking_object = None
 object_queue = queue.Queue()
 
 # Initialize the tracker globally
-tracker = cv2.TrackerCSRT_create()
+tracker = cv2.TrackerKCF_create()
 init_tracker = False
 tracking_failed = False
 frame_lock = threading.Lock()  # Lock for safe frame access
@@ -93,7 +93,7 @@ def detect_objects(frame):
 
         detected_objects = []
         for i in range(num_boxes):
-            if detected_scores[i] > 0.5:
+            if detected_scores[i] > 0.6:  # Increased confidence threshold
                 ymin, xmin, ymax, xmax = detected_boxes[i]
                 im_height, im_width, _ = frame.shape
                 left = int(xmin * im_width)
@@ -162,12 +162,12 @@ def capture_and_detect():
                     if label == tracking_object[0]:
                         print(f"Object {label} re-entered the frame")
                         with frame_lock:
-                            tracker = cv2.TrackerCSRT_create()
+                            tracker = cv2.TrackerKCF_create()
                             tracker.init(frame_rgb, (left, top, right-left, bottom-top))
                         tracking_failed = False
                         break
 
-            disp_frame  = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+            disp_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
             cv2.imshow("Object Detection and Tracking", disp_frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -195,11 +195,11 @@ def user_input_listener():
                 tracking_failed = False
                 print(f"Now tracking: {tracking_object[0]}")
                 label, (left, top, right, bottom) = tracking_object
-                tracker = cv2.TrackerCSRT_create()
+                tracker = cv2.TrackerKCF_create()
                 with frame_lock:
                     tracker.init(frame_rgb, (left, top, right-left, bottom-top))
             elif choice.lower() == 'q':
-                exit()
+                shutdown_event.set()
                 break
 
 def cleanup():
@@ -227,7 +227,6 @@ if __name__ == '__main__':
         print("Exiting")
         exit()
     finally:
-        print("KeyboardInterrupt received. Shutting down...")
         cleanup()
         capture_and_detect_thread.join()
         print("Exiting")
