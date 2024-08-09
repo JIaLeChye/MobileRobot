@@ -1,4 +1,5 @@
 import threading
+import queue
 import tflite_runtime.interpreter as tflite
 import cv2
 import numpy as np
@@ -6,13 +7,24 @@ from picamera2 import Picamera2
 from libcamera import controls
 import os
 import time
+
 from PCA9685_MC import Motor_Controller
-import queue
+from Motor_Encoder import Encoder
+from Ultrasonic_sens import Ultrasonic 
 
 # Initialize the libraries for the movements of the robot
 motor = Motor_Controller()
+enc = Encoder(ODISPLAY=True)
+usonic = Ultrasonic()
 
-# Verify the model and label files
+# Set Camera Position
+horizontal = 1
+vertical = 0
+
+motor.servoPulse(horizontal, 1250)
+motor.servoPulse(vertical, 1050)
+
+# Verify the model and label files 
 model_folder = 'tensorflow_lite_examples'
 model_file = '/mobilenet_v2.tflite'
 model_path = model_folder + model_file
@@ -47,13 +59,10 @@ print("Camera started")
 # Continuous Auto Focus
 cam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
-# Create the object_Tracking folder if it doesn't exist
-output_folder = 'object_Tracking'
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
-
+obstacle_avoid = threading.Event() 
 shutdown_event = threading.Event()
-cleanup_event = threading.Event()  # New event to signal cleanup
+cleanup_event = threading.Event()
+
 interpreter = tflite.Interpreter(model_path=model_path)
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
@@ -69,10 +78,11 @@ object_queue = queue.Queue()
 tracker = cv2.TrackerKCF_create()
 init_tracker = False
 tracking_failed = False
-frame_lock = threading.Lock()  # Lock for safe frame access
+frame_lock = threading.Lock()
 frame_rgb = None
+tracking_object_features = None  # Track object features for comparison
 
-def detect_objects(frame):
+def detect_objects(frame, update_queue=True):
     try:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if rgb_frame.size == 0:
@@ -93,7 +103,7 @@ def detect_objects(frame):
 
         detected_objects = []
         for i in range(num_boxes):
-            if detected_scores[i] > 0.6:  # Increased confidence threshold
+            if detected_scores[i] > 0.5:
                 ymin, xmin, ymax, xmax = detected_boxes[i]
                 im_height, im_width, _ = frame.shape
                 left = int(xmin * im_width)
@@ -104,35 +114,52 @@ def detect_objects(frame):
                 label = labels.get(class_id, 'Unknown')
                 detected_objects.append((label, (left, top, right, bottom)))
                 cv2.rectangle(rgb_frame, (left, top), (right, bottom), (255, 0, 0), 2)
-                cv2.imshow("Object Detection and Tracking", rgb_frame)
+                cv2.imshow("Object Detection", rgb_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
+                
 
+        if update_queue:
+            object_queue.put(detected_objects)
+
+       
         return detected_objects
+   
+        
     except Exception as e:
         print(f"Error in detect_objects: {e}")
         return []
 
+def extract_features(frame, bbox):
+    """Extract features from the bounding box in the frame."""
+    x, y, w, h = bbox
+    roi = frame[y:y+h, x:x+w]
+    hist = cv2.calcHist([roi], [0, 1, 2], None, [16, 16, 16], [0, 256, 0, 256, 0, 256])
+    return hist.flatten()
+
+def match_features(features1, features2, threshold=0.7):
+    """Compare features using correlation to check if they match."""
+    correlation = cv2.compareHist(features1, features2, cv2.HISTCMP_CORREL)
+    return correlation >= threshold
+
 def capture_and_detect():
-    global detected_objects_info, tracking_object, init_tracker, tracking_failed, frame_rgb, tracker
+    global detected_objects_info, tracking_object, init_tracker, tracking_failed, frame_rgb, tracker, tracking_object_features
     print("Starting frame capture and object detection")
     frame_count = 0
     start_time = time.time()
 
     while not shutdown_event.is_set():
+        obstacle_avoid.clear()
         try:
             frame = cam.capture_array()
             if frame.size == 0:
-                continue  # Skip empty frames
+                continue
             frame_count += 1
-
-            # Ensure the frame is in RGB format
             with frame_lock:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            if tracking_failed or tracking_object is None:
-                detected_objects_info = detect_objects(frame_rgb)
-                object_queue.put(detected_objects_info)
+            # Call detect_objects to update queue
+            detect_objects(frame_rgb, update_queue=True)
 
             elapsed_time = time.time() - start_time
             fps = frame_count / elapsed_time
@@ -149,6 +176,9 @@ def capture_and_detect():
                         with frame_lock:
                             cv2.rectangle(frame_rgb, (left, top), (right, bottom), (255, 0, 0), 2)
                             cv2.putText(frame_rgb, tracking_object[0], (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                            centerPoint = (int((left + right) / 2), int((top + bottom) / 2))
+                            cv2.circle(frame_rgb, centerPoint, 5, (0, 0, 255), -1)
+
                     else:
                         print("Tracking failed, waiting for object to re-enter frame")
                         tracking_failed = True
@@ -157,15 +187,17 @@ def capture_and_detect():
                     tracking_failed = True
 
             if tracking_failed:
-                detected_objects_info = detect_objects(frame_rgb)
+                detected_objects_info = detect_objects(frame_rgb, update_queue=False)
                 for label, (left, top, right, bottom) in detected_objects_info:
                     if label == tracking_object[0]:
-                        print(f"Object {label} re-entered the frame")
-                        with frame_lock:
-                            tracker = cv2.TrackerKCF_create()
-                            tracker.init(frame_rgb, (left, top, right-left, bottom-top))
-                        tracking_failed = False
-                        break
+                        print(f"Similar Object {label} re-entered the frame")
+                        new_features = extract_features(frame_rgb, (left, top, right-left, bottom-top))
+                        if tracking_object_features is not None and match_features(new_features, tracking_object_features):
+                            with frame_lock:
+                                tracker = cv2.TrackerKCF_create()
+                                tracker.init(frame_rgb, (left, top, right-left, bottom-top))
+                            tracking_failed = False
+                            break
 
             disp_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
             cv2.imshow("Object Detection and Tracking", disp_frame)
@@ -179,7 +211,7 @@ def capture_and_detect():
     cleanup_event.set()  # Signal the cleanup event
 
 def user_input_listener():
-    global detected_objects_info, tracking_object, init_tracker, tracking_failed, frame_rgb, tracker
+    global detected_objects_info, tracking_object, init_tracker, tracking_failed, frame_rgb, tracker, tracking_object_features
     while not shutdown_event.is_set():
         input("Press Enter to display detected objects...")
         detected_objects_info = object_queue.get()
@@ -195,39 +227,82 @@ def user_input_listener():
                 tracking_failed = False
                 print(f"Now tracking: {tracking_object[0]}")
                 label, (left, top, right, bottom) = tracking_object
-                tracker = cv2.TrackerKCF_create()
                 with frame_lock:
+                    tracker = cv2.TrackerKCF_create()
                     tracker.init(frame_rgb, (left, top, right-left, bottom-top))
+                    tracking_object_features = extract_features(frame_rgb, (left, top, right-left, bottom-top))
             elif choice.lower() == 'q':
                 shutdown_event.set()
                 break
 
+def obstacle_avoidance():
+    Speed = 25
+    rotation_speed = 20
+    threshold = 30
+    min_thresh_dist = 15
+
+    while not shutdown_event.is_set():
+        if not obstacle_avoid.is_set():
+            motor.Brake()
+            continue
+
+        left, front, right = usonic.distances()
+        time.sleep(0.1)
+        if left is not None and front is not None and right is not None:
+            if front < threshold:
+                if front <= min_thresh_dist:
+                    motor.Backward(Speed)
+                elif left < threshold and right < threshold:
+                    motor.Backward(Speed)
+                    time.sleep(0.1)
+                elif left < threshold:
+                    motor.Clock_Rotate(rotation_speed)
+                    time.sleep(0.1)
+                elif right < threshold:
+                    motor.AntiClock_Rotate(rotation_speed)
+                    time.sleep(0.1)
+                else:
+                    if right > left:
+                        motor.Clock_Rotate(rotation_speed)
+                        time.sleep(0.1)
+                    elif left > right:
+                        motor.AntiClock_Rotate(rotation_speed)
+                        time.sleep(0.1)
+            elif left < threshold:
+                motor.Clock_Rotate(Speed)
+            elif right < threshold:
+                motor.AntiClock_Rotate(Speed)
+            else:
+                motor.Forward(Speed)
+        else:
+            print("No data received")
+            motor.Brake()
+            time.sleep(1)
+
 def cleanup():
-    print("Cleaning up resources...")
-    shutdown_event.set()
-    motor.Brake()
+    print("Performing cleanup...")
     cam.stop()
-    cleanup_event.wait()  # Wait for the cleanup event to be set
     cv2.destroyAllWindows()
-    print("Resources cleaned up")
+    motor.Brake()  # Ensure you have a cleanup method for Motor_Controller
+    exit()
 
-if __name__ == '__main__':
-    capture_and_detect_thread = threading.Thread(target=capture_and_detect)
-    capture_and_detect_thread.start()
-    time.sleep(0.5)
+# Start the threads
+capture_thread = threading.Thread(target=capture_and_detect)
+input_thread = threading.Thread(target=user_input_listener)
+obstacle_thread = threading.Thread(target=obstacle_avoidance)
 
-    print("All threads started")
+capture_thread.start()
+input_thread.start()
+obstacle_thread.start()
 
-    try:
-        user_input_listener()
-    except KeyboardInterrupt:
-        print("KeyboardInterrupt received. Shutting down...")
-        cleanup()
-        capture_and_detect_thread.join()
-        print("Exiting")
-        exit()
-    finally:
-        cleanup()
-        capture_and_detect_thread.join()
-        print("Exiting")
-        exit()
+try:
+    capture_thread.join()
+    input_thread.join()
+    obstacle_thread.join()
+except KeyboardInterrupt:
+    shutdown_event.set()
+
+finally:
+    cleanup_event.wait()
+    cleanup()
+    exit()
