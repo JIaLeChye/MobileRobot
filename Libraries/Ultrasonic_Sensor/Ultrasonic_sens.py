@@ -47,25 +47,29 @@ class Ultrasonic:
 
     def wait_for_echo(self, pin):
         """
-        Waits for rising and falling edges on the echo pin (specified pin) to calculate pulse duration.
+        Waits for a rising edge on the echo pin (specified pin) and measures the pulse duration.
         """
         GPIO.setup(pin, GPIO.IN)
-        pulse_start = time.time()
-        Initial_Time = pulse_start  
         timeout = 0.01  # Timeout set to 10 milliseconds
-        while GPIO.input(pin) == 0 and time.time() - Initial_Time < timeout:
-            pulse_start = time.time()
-            if self.debug:
-                print("Waiting for echo...")
-
-        if GPIO.input(pin) == 0:
-            print("Time Out: No echo received.")
-            return None
-
-        pulse_end = time.time()
+        
+        Initial_Time = time.time()
+        
+        # Wait for the rising edge
+        while GPIO.input(pin) == 0:
+            if time.time() - Initial_Time >= timeout:
+                if self.debug:
+                    print("Time Out: No rising edge detected.")
+                return None  # Return None if no rising edge is detected within timeout
+        
+        pulse_start = time.time()
+        
+        # Measure the pulse duration
         while GPIO.input(pin) == 1:
-            pulse_end = time.time()
-
+            pass  # Wait until the echo pin goes low
+        
+        pulse_end = time.time()
+        
+        # Calculate and return the pulse duration
         pulse_duration = pulse_end - pulse_start
         return pulse_duration
 
