@@ -61,13 +61,13 @@ class Ultrasonic:
                     print("Time Out: No rising edge detected.")
                 return None  # Return None if no rising edge is detected within timeout
         
+       
         pulse_start = time.time()
-        
         # Measure the pulse duration
         while GPIO.input(pin) == 1:
-            pass  # Wait until the echo pin goes low
-        
-        pulse_end = time.time()
+            pulse_end = time.time()
+            if self.debug:
+                print("Echo received")
         
         # Calculate and return the pulse duration
         pulse_duration = pulse_end - pulse_start
@@ -91,9 +91,9 @@ class Ultrasonic:
             self.send_trigger_pulse(pin)  # Retry sending trigger pulse
             pulse_duration = self.wait_for_echo(pin)  # Wait for echo again
             return None 
-                
+        else: 
+            distance = (pulse_duration * self.SOUND_SPEED) / 2
 
-        distance = pulse_duration * self.SOUND_SPEED / 2
         if self.debug:
             print(f"Distance: {distance} cm for pin {pin}")
         return distance
