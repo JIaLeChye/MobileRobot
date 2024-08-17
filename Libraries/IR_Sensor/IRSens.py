@@ -34,7 +34,7 @@ class IRsens:
 
 if __name__ == "__main__":
     try:
-        IR = IRsens()
+        IR = IRsens(debug = True)
         while True: 
             print(IR.status())
             time.sleep(0.5)

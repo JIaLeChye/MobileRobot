@@ -60,8 +60,8 @@ def main():
         
         
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        Black_lower = np.array([0,0,0], dtype = "uint8")
-        Black_upper = np.array([179, 255, 40], dtype = "uint8")
+        Black_lower = np.array([56,22,27], dtype = "uint8")
+        Black_upper = np.array([179, 255, 255], dtype = "uint8")
         Blacklines = cv2.inRange(frame, Black_lower, Black_upper)
                
 #         kernel = np.ones((5,5), np.uint8)

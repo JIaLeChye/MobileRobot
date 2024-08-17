@@ -1,3 +1,5 @@
+# Library Version Number: V1.2 
+
 import RPi.GPIO as GPIO 
 import adafruit_ssd1306
 import board 
@@ -24,9 +26,8 @@ class Encoder:
             
             self.left_enc_val = 0
             self.right_enc_val = 0
-            self.i2c = board.I2C()
-            self.oled = adafruit_ssd1306.SSD1306_I2C(128, 64, self.i2c, addr=OLED_addr)
-            
+           
+
             if self.debug:
                 print("Encoder Resolution =", self.ENCODER_RES)
                 print("Gear Ratio =", self.gear_ratio)
@@ -101,7 +102,10 @@ class Encoder:
         """
         Read encoder values and calculate RPM.
         """
-        
+        if not hasattr(self, 'setup_done'):
+            self.setup()
+            self.setup_done = True  # Flag to avoid repeated setup
+            
         start_time = time.time()
         left_start_enc_val = self.left_enc_val
         right_start_enc_val = self.right_enc_val

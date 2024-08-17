@@ -1,3 +1,5 @@
+# Library Version Number: V1.2
+
 import RPi.GPIO as GPIO 
 import adafruit_ssd1306
 import board 
@@ -9,7 +11,7 @@ class Encoder:
     """
     isinit = False
 
-    def __init__(self, debug=False, ENCODER_RES=13, gear_ratio=30, LEFT_HALLSEN=11, RIGHT_HALLSEN=10, ODISPLAY=False, OLED_addr=0x3c):
+    def __init__(self, debug=False, ENCODER_RES=13, gear_ratio=30, LEFT_HALLSEN=20, RIGHT_HALLSEN=10, ODISPLAY=False, OLED_addr=0x3c):
         """
         Initialize the Encoder object with specified parameters.
         """
@@ -24,9 +26,8 @@ class Encoder:
             
             self.left_enc_val = 0
             self.right_enc_val = 0
-            self.i2c = board.I2C()
-            self.oled = adafruit_ssd1306.SSD1306_I2C(128, 64, self.i2c, addr=OLED_addr)
-            
+
+
             if self.debug:
                 print("Encoder Resolution =", self.ENCODER_RES)
                 print("Gear Ratio =", self.gear_ratio)
@@ -55,7 +56,7 @@ class Encoder:
         Set up GPIO pins and initialize encoder.
         """
         retry_count = 3
-        while retry_count > 0:
+        while retry_count >= 0:
             try:
                 GPIO.cleanup() # Clean up GPIO
                 GPIO.setmode(GPIO.BCM) # Set GPIO Mode to BCM
@@ -66,8 +67,8 @@ class Encoder:
                     current_Mode = GPIO.getmode()
                     print("Current GPIO Mode:", current_Mode)
                     print(f"Setting up edge detection for pins: LEFT={self.LEFT_HALLSEN}, RIGHT={self.RIGHT_HALLSEN}")
-                GPIO.add_event_detect(self.LEFT_HALLSEN, GPIO.BOTH, callback=self.left_update)
-                GPIO.add_event_detect(self.RIGHT_HALLSEN, GPIO.BOTH, callback=self.right_update)
+                GPIO.add_event_detect(self.LEFT_HALLSEN, GPIO.RISING, callback=self.left_update)
+                GPIO.add_event_detect(self.RIGHT_HALLSEN, GPIO.RISING, callback=self.right_update)
                 if self.debug:
                     print("GPIO edge detection added successfully.")
                 break
@@ -101,7 +102,12 @@ class Encoder:
         """
         Read encoder values and calculate RPM.
         """
-        
+        if not hasattr(self, 'setup_done'):
+            self.setup()
+            self.setup_done = True  # Flag to avoid repeated setup
+
+
+
         start_time = time.time()
         left_start_enc_val = self.left_enc_val
         right_start_enc_val = self.right_enc_val
@@ -154,7 +160,7 @@ class Encoder:
             self.i2c.deinit()
     
 if __name__ == '__main__':
-    enc = Encoder(ODISPLAY=True, debug=True)
+    enc = Encoder(ODISPLAY=False, debug=True)
     try: 
         while True:
             left_rpm, right_rpm = enc.encoder()

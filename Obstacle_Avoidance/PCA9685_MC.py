@@ -7,7 +7,7 @@ import time # Import the time Library
 class Motor_Controller:
     # Declare all the Variables 
     """
-    This Library uses the PCA9685 I2C PWM Module to simulate the PWM Frequency. 
+    This Library uses the PCA9685 I2C PWM to simulate the PWM Frequency. 
     Dependency: PCA9685
               : Time 
     
@@ -44,7 +44,7 @@ class Motor_Controller:
     """
     __init__check = False 
 
-    def __init__(self, addr=0x40, PWMFreq=50, debug=False):
+    def __init__(self, addr=0x40, PWMFreq=100, debug=False):
         """
         All the Motor Driver is assigned:
         :F_M1A = 4 (I2C Channel)
@@ -279,7 +279,18 @@ if __name__ == '__main__':
         Freq = 20
         while True:
             Motor.AntiClock_Rotate(Freq)
-     
+            time.sleep(3)
+            Motor.Brake()
+            time.sleep(2)
+            Motor.Backward(Freq)
+            time.sleep(3)
+            Motor.Brake()
+            time.sleep(2)
+            Motor.Horizontal_Left(Freq)
+            time.sleep(3)
+            Motor.Brake()
+            time.sleep(2)
+            print(f"Motor Runing: {Freq}")
 
     except KeyboardInterrupt:
         Motor.Brake()
