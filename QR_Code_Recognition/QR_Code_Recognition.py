@@ -18,7 +18,6 @@ fps = 0
 
 
 while True :
-
     frame = cam.capture_array()
     data, bbox, _ = detector.detectAndDecode(frame)
     fps +=1

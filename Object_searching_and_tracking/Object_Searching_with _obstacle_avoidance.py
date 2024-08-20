@@ -17,12 +17,12 @@ motor = Motor_Controller()
 enc = Encoder(ODISPLAY=True)
 usonic = Ultrasonic()
 
-# Set Camera Position
-horizontal = 1
-vertical = 0
+# # Set Camera Position
+# horizontal = 1
+# vertical = 0
 
-motor.servoPulse(horizontal, 1250)
-motor.servoPulse(vertical, 1050)
+# motor.servoPulse(horizontal, 1250)
+# motor.servoPulse(vertical, 1050)
 
 # Verify the model and label files 
 model_folder = 'tensorflow_lite_examples'
@@ -280,11 +280,12 @@ def obstacle_avoidance():
             time.sleep(1)
 
 def cleanup():
-    print("Performing cleanup...")
-    cam.stop()
-    cv2.destroyAllWindows()
-    motor.Brake()  # Ensure you have a cleanup method for Motor_Controller
-    exit()
+    while shutdown_event.is_set():
+        print("Performing cleanup...")
+        cam.stop()
+        cv2.destroyAllWindows()
+        motor.Brake()  # Ensure you have a cleanup method for Motor_Controller
+        exit()
 
 # Start the threads
 capture_thread = threading.Thread(target=capture_and_detect)
