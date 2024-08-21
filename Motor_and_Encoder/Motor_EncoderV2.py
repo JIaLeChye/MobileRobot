@@ -69,7 +69,7 @@ class Encoder:
                 GPIO.setup(self.RIGHT_HALLSEN_A, GPIO.IN)
                 GPIO.setup(self.LEFT_HALLSEN_B, GPIO.IN)
                 GPIO.setup(self.RIGHT_HALLSEN_B, GPIO.IN)
-                self.left_last_state = GPIO.input(self.LEFT_HALLSEN_A)
+                self.left_last_state = GPIO.input(self.LEFT_HALLSEN_A, )
                 self.right_last_state = GPIO.input(self.RIGHT_HALLSEN_A) 
                 if self.debug:
                     current_Mode = GPIO.getmode()
@@ -131,7 +131,7 @@ class Encoder:
         time_interval = end_time - start_time
         
         left_rpm = ((left_pulse_count * 60) / (time_interval * self.ENCODER_RES)) / self.gear_ratio
-        right_rpm = ((right_pulse_count * 60) / (time_interval * self.ENCODER_RES)) / self.gear_ratio
+        right_rpm = right_rpm = (right_pulse_count/self.ENCODER_RES) * (time_interval/60) * self.gear_ratio
 
         if self.ODISPLAY:
             self.oled.fill(0)

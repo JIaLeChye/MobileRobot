@@ -14,11 +14,11 @@ def Movement():
     global Motor, shutdown_event
     while not shutdown_event.is_set(): 
         
-        Motor.Forward(100)
+        Motor.Forward(20)
         time.sleep(5)
         Motor.Brake()
         time.sleep(1)
-        Motor.Backward(100)
+        Motor.Backward(20)
         time.sleep(1)
         Motor.Brake()
         time.sleep(1)
