@@ -1,5 +1,4 @@
 # Library Version Number: V1.2
-
 import RPi.GPIO as GPIO 
 import adafruit_ssd1306
 import board 
@@ -125,7 +124,7 @@ class Encoder:
         time_interval = end_time - start_time
         
         left_rpm = (left_pulse_count * 60) / (time_interval * self.ENCODER_RES) / self.gear_ratio
-        right_rpm = (right_pulse_count * 60) / (time_interval * self.ENCODER_RES) / self.gear_ratio
+        right_rpm = (right_pulse_count/self.ENCODER_RES) * (60/time_interval) * self.gear_ratio
 
         if self.ODISPLAY:
             self.oled.fill(0)
