@@ -17,8 +17,8 @@ def init():
         picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         picam2.start()
         picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-        enc = Encoder(debug=True)
-        ultrasonic = Ultrasonic(debug=True)
+        enc = Encoder(ODISPLAY=True)
+        ultrasonic = Ultrasonic()
         Motor = Motor_Controller()
         Speed = 20
         rotation_speed = 50
@@ -47,44 +47,54 @@ def obstacle_Avoid(left, front, right):
     
     if front < threshold:
         if front <= min_thresh_dist:
+            print("Reversing")
             Motor.Backward(Speed)
             time.sleep(0.1)
             Motor.Brake()
         elif left < min_thresh_dist and right < min_thresh_dist:
+            print("Reversing")
             Motor.Backward(Speed)
             time.sleep(0.1)
             Motor.Brake()
         elif left < threshold:
+            print("Turning Right") 
             Motor.Clock_Rotate(rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         elif right < threshold:
+            print("Turning Left") 
             Motor.AntiClock_Rotate(rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         else:
+            print("Reversing")
             Motor.Backward(Speed)
             time.sleep(0.1)
             Motor.Brake()
     
     elif left < threshold:
+        print("Turning Right")
         Motor.Clock_Rotate(rotation_speed)
         time.sleep(1)
         Motor.Brake()
     
     elif right < threshold:
+        print("Turning Left") 
         Motor.AntiClock_Rotate(rotation_speed)  
         time.sleep(1)
         Motor.Brake()
     
     else:
         if right > threshold and left > threshold:
+            print("Forward") 
             Motor.Forward(Speed)
         elif right > threshold:
+            print("Turning Right")
             Motor.Clock_Rotate(rotation_speed)
             time.sleep(0.1)
             Motor.Brake()
         elif left > threshold:
+            print("Turning Left")
             Motor.AntiClock_Rotate(rotation_speed)
             time.sleep(0.1)
             Motor.Brake()
@@ -127,6 +137,7 @@ def main():
         enc.stop()
         capture_thread.join()
         cv2.destroyAllWindows()
+        exit()
         print("Program Terminated")
 
 
