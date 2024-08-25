@@ -1,49 +1,30 @@
-import RPi.GPIO as GPIO 
-from PCA9685_MC import  Motor_Controller  
-import time 
+# This is a script for Raspberry Pi Uisng Maker Line 
+
+
+from PCA9685_MC import Motor_Controller 
 from Motor_Encoder import Encoder 
+import time 
+import RPi.GPIO as GPIO 
+
+def int():  
+    global Motor, enc, D1, D2, D3, D4, D5
+    Motor = Motor_Controller()
+    enc = Encoder() 
+    GPIO.setmode(GPIO.BCM)
+    D1 = 6 
+    D2 = 11
+    D3 = 13
+    D4 = 17 
+    D5 = 19 
+
+    GPIO.setup(D1, GPIO.IN)
+    GPIO.setup(D2, GPIO.IN)
+    GPIO.setup(D3, GPIO.IN)
+    GPIO.setup(D4, GPIO.IN)
+    GPIO.setup(D5, GPIO.IN)
 
 
 
-def init(): 
-    global Leftsensor, Rightsensor, motor, enc
-    Leftsensor = 13
-    Rightsensor  = 11 
-    GPIO.setmode(GPIO.BCM) 
-    
-    motor = Motor_Controller() 
-    enc = Encoder()
+def main():
+    int()
 
-def main(): 
-    init()
-    
-    while True:
-        GPIO.setup(Leftsensor, GPIO.IN)
-        GPIO.setup(Rightsensor, GPIO.IN)
-        Rightstat = GPIO.input(Leftsensor)
-        Leftstat = GPIO.input(Rightsensor)
-        print(f"Left Sensor: {Leftstat}, Right Sensor: {Rightstat}")
-        enc.encoder() 
-        if (Leftstat and Rightstat) is not None: 
-            if Leftstat == 0 and Rightstat == 0:
-                motor.Forward(15)
-            elif Leftstat == 0 and Rightstat == 1:
-                motor.Clock_Rotate(50) 
-                time.sleep(0.5)
-            elif Leftstat == 1 and Rightstat == 0:
-                motor.AntiClock_Rotate(50)
-                time.sleep(0.5)
-            else:
-                motor.Brake()
-        else:
-            motor.Brake()
-            
-
-try:
-
-    if __name__ == "__main__":
-        main() 
-except KeyboardInterrupt:
-    motor.Brake() 
-    enc.stop()
-    GPIO.cleanup() 
