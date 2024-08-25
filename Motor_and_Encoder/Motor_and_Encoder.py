@@ -36,24 +36,33 @@ def encoder():
         print("Right Distance: {:.2f}m".format(Right_dist))
         time.sleep(0.2)
     
+def userinput(): 
+    pass
 
+def cleanup():
+    global Motor, enc, shutdown_event
 
+    # Set shutdown event
+    shutdown_event.set()
 
-        
-    
-try: 
-    if __name__ == '__main__':
+    # Wait for threads to finish
+    Movement_thred.join()
+    encoder_thred.join()
+
+    # Stop motor and encoder
+    Motor.cleanup()
+    enc.stop()
+
+    print("Shutdown complete.")
+if __name__ == '__main__':
+    try: 
         init()
         Movement_thred = threading.Thread(target=Movement)
         encoder_thred = threading.Thread(target=encoder)
         Movement_thred.start()
         encoder_thred.start()
-        
-
-except KeyboardInterrupt:
-    print("Shutting down")
-    Movement_thred.join() 
-    encoder_thred.join()
-    shutdown_event.set()
-    enc.stop()
-    Motor.Brake()
+        7
+    except KeyboardInterrupt:
+        print("Shutting down")
+        cleanup() 
+    
