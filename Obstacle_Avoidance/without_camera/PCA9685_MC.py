@@ -267,6 +267,15 @@ class Motor_Controller:
             print(f"The Servo Channel is {channel}")
 
     
+
+    def cleanup(self):
+        """
+        This function cleans up the GPIO
+        """
+        for i in range(16):
+            self.PWM.setServoPulse(i, 0)
+
+    
 if __name__ == '__main__':
     """
     This is the Demo Code of this Library 
@@ -279,25 +288,10 @@ if __name__ == '__main__':
         Freq = 20
         while True:
             Motor.AntiClock_Rotate(Freq)
-            time.sleep(3)
-            Motor.Brake()
-            time.sleep(2)
-            Motor.Backward(Freq)
-            time.sleep(3)
-            Motor.Brake()
-            time.sleep(2)
-            Motor.Horizontal_Left(Freq)
-            time.sleep(3)
-            Motor.Brake()
-            time.sleep(2)
-            print(f"Motor Runing: {Freq}")
+     
 
     except KeyboardInterrupt:
-        Motor.Brake()
+        Motor.cleanup()
     except Exception as e:
         print("Error Accour:", e)
-        Motor.Brake()
-            
-
-            
-        
+        Motor.cleanup()

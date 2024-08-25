@@ -266,6 +266,14 @@ class Motor_Controller:
             print(f"Servo Pulse at {Freq}")
             print(f"The Servo Channel is {channel}")
 
+
+    def cleanup(self):
+        """
+        This function cleans up the GPIO
+        """
+        for i in range(16):
+            self.PWM.setServoPulse(i, 0)
+
     
 if __name__ == '__main__':
     """
@@ -282,11 +290,7 @@ if __name__ == '__main__':
      
 
     except KeyboardInterrupt:
-        Motor.Brake()
+        Motor.cleanup()
     except Exception as e:
         print("Error Accour:", e)
-        Motor.Brake()
-            
-
-            
-        
+        Motor.cleanup()

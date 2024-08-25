@@ -1,6 +1,3 @@
-# This is a script for Raspberry Pi Uisng Maker Line 
-
-
 from PCA9685_MC import Motor_Controller 
 from Motor_Encoder import Encoder 
 import time 
@@ -27,4 +24,13 @@ def int():
 
 def main():
     int()
+
+
+
+try: 
+    if __name__ == 'main': 
+        main() 
+
+except KeyboardInterrupt: 
+    Motor.cleanup()
 
