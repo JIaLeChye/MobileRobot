@@ -58,7 +58,7 @@ class Encoder:
         retry_count = 3
         while retry_count >= 0:
             try:
-                GPIO.cleanup() # Clean up GPIO
+                # GPIO.cleanup() # Clean up GPIO
                 GPIO.setmode(GPIO.BCM) # Set GPIO Mode to BCM
                 GPIO.setwarnings(False) 
                 GPIO.setup(self.LEFT_HALLSEN, GPIO.IN)
@@ -78,7 +78,7 @@ class Encoder:
                 time.sleep(1)
                 GPIO.remove_event_detect(self.LEFT_HALLSEN)
                 GPIO.remove_event_detect(self.RIGHT_HALLSEN)
-                GPIO.cleanup()  # Ensure GPIO cleanup before retrying
+                # GPIO.cleanup()  # Ensure GPIO cleanup before retrying
 
         if retry_count == 0:
             print("Failed to add edge detection after multiple attempts.")
