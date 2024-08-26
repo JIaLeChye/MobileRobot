@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import time
 from picamera2 import Picamera2
+from libcamera import controls 
 # A required callback method that goes into the trackbar function.
 def nothing(x):
     pass
@@ -14,6 +15,8 @@ picam2.preview_configuration.main.format = 'RGB888'
 picam2.preview_configuration.align()
 picam2.configure("preview")
 picam2.start() 
+picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+
 
 # Create a window named trackbars.
 cv2.namedWindow("Trackbars")
