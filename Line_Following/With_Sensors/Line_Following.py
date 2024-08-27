@@ -43,20 +43,12 @@ def main():
             print("Brake")
 
         if (outerRight == 1 or Right == 1) and center == 0 and Left == 0 and outerLeft == 0:
-            if outerRight == 1 :
-               Motor.Clock_Rotate(20)
-               print("Turn sharp Right")  # Turn faster if only outerRight is detected
-            else:
-                print("Turn Right")  # Normal clockwise rotation
-                Motor.Clock_Rotate(20)
+            print("Turn Right")  # Normal clockwise rotation
+            Motor.Clock_Rotate(20)
 
         if (outerLeft == 1 or Left == 1) and center == 0 and Right == 0 and outerRight == 0:
-            if outerLeft == 1: 
-                print("Turn sharp Left")  # Turn faster if only outerLeft is detected
-                Motor.AntiClock_Rotate(20)
-            else:
-                Motor.AntiClock_Rotate(20)
-                print("Turn Left")  # Normal anticlockwise rotation
+            Motor.AntiClock_Rotate(20)
+            print("Turn Left")  # Normal anticlockwise rotation
 
         if (center == 1 and Right == 1 and Left == 1 and outerLeft == 0 and outerRight == 0) or (center == 1 and Right == 0 and Left == 0 and outerRight == 0 and outerLeft == 0):
             Motor.Forward(15)
@@ -66,13 +58,6 @@ def main():
             Motor.Brake()
             print("Brake")
 
-        if center == 0 and Right == 0 and Left == 0 and (outerRight == 1 or outerLeft == 1):
-            if outerRight == 1 and outerLeft == 0:
-                Motor.Clock_Rotate(20)  # Prioritize turning clockwise with higher speed
-                print("Turn Right") 
-            elif outerLeft == 1 and outerRight == 0:
-                Motor.AntiClock_Rotate(20)  # Prioritize turning anticlockwise with higher speed
-                print("Turn Left")
 
 try: 
     if __name__ == '__main__': 
