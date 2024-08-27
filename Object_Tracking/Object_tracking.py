@@ -51,8 +51,6 @@ def colorPicker():
 def main():
     global picam 
     lower_bound , upper_bound = colorPicker()
-    lower_bound = np.array([int(x) for x in lower_bound.split(",")])
-    upper_bound = np.array([int(x) for x in upper_bound.split(",")])
 
     while True:
         img = picam.capture_array()
@@ -66,7 +64,7 @@ def main():
                 if area > 1500:
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    cv2.putText(img, f"Object {i + 1}", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                    # cv2.putText(img, f"Object {i + 1}", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
 
                     center_x = int(x + w // 2)
                     center_y = int(y + h // 2)
@@ -78,7 +76,7 @@ def main():
                     cv2.putText(img, f"Center Y: {center_y}", (10, 60), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
                     cv2.putText(img, f"Area: {area}", (10, 90), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
 
-                    if center_y < 300:
+                    if center_y < 400:
                         if 50 < center_x < 320:
                             print("Turn right")
                             Motor.Clock_Rotate(20)
