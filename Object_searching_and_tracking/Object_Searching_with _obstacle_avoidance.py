@@ -17,12 +17,11 @@ motor = Motor_Controller()
 enc = Encoder(ODISPLAY=True)
 usonic = Ultrasonic()
 
-# # Set Camera Position
-# horizontal = 1
-# vertical = 0
-
-# motor.servoPulse(horizontal, 1250)
-# motor.servoPulse(vertical, 1050)
+# # Set Camera Position ( Using Servo HAT)
+horizontal = 1
+vertical = 0
+motor.servoPulse(horizontal, 1250)
+motor.servoPulse(vertical, 1050)
 
 # Verify the model and label files 
 model_folder = 'tensorflow_lite_examples'
