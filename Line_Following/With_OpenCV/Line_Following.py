@@ -25,7 +25,6 @@ def init():
     # Set PanTilt and servo HAT
     horizontal = 1
     vertical = 0
-    
     Motor.servoPulse(horizontal, 1250)
     time.sleep(0.1)
     Motor.servoPulse(vertical, 1730)
