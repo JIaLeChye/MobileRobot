@@ -2,7 +2,13 @@ import cv2
 from picamera2 import Picamera2 
 from libcamera import controls
 import time 
+from PCA9685_MC import Motor_Controller
 
+Motor = Motor_Controller()
+vertical = 0
+horizontal = 1
+Motor.servoPulse(horizontal, 1250)
+Motor.servoPulse(vertical, 1050)
 
 frame_width = 640 
 frame_height = 480 
@@ -47,4 +53,5 @@ while True :
         break 
 
 cam.stop()
+Motor.cleanup()
 cv2.destroyAllWindows() 

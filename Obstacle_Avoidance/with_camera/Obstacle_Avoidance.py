@@ -13,17 +13,22 @@ def init():
     isInit = False
 
     if not isInit: 
-        picam2 = Picamera2() 
-        picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
-        picam2.start()
-        picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+        
         enc = Encoder(ODISPLAY=True)
         ultrasonic = Ultrasonic()
         Motor = Motor_Controller()
+        vertical = 0
+        horizontal = 1
+        Motor.servoPulse(horizontal, 1250)
+        Motor.servoPulse(vertical, 1050)
         Speed = 20
         rotation_speed = 50
         threshold = 30 
         min_thresh_dist = 10 
+        picam2 = Picamera2() 
+        picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+        picam2.start()
+        picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         frame_lock = threading.Lock()
         shutdown_event = threading.Event()
         isInit = True 
@@ -108,38 +113,42 @@ def main():
     
     capture_thread = threading.Thread(target=capture_frame)  # Start the capture frame thread
     capture_thread.start()
-    
-    try:
-        while not shutdown_event.is_set():
-            enc.encoder()
-            left, front, right = ultrasonic.distances()
+
+    while not shutdown_event.is_set():
+        enc.encoder()
+        left, front, right = ultrasonic.distances()
+        time.sleep(0.1)
+        if left is not None and front is not None and right is not None: 
+            print("Left: {:.2f}".format(left)) 
+            print("Front: {:.2f}".format(front))
+            print("Right: {:.2f}".format(right)) 
+            print(" ")
+            obstacle_Avoid(left, front, right)
             time.sleep(0.1)
-            if left is not None and front is not None and right is not None: 
-                print("Left: {:.2f}".format(left)) 
-                print("Front: {:.2f}".format(front))
-                print("Right: {:.2f}".format(right)) 
-                print(" ")
-                obstacle_Avoid(left, front, right)
-                time.sleep(0.1)
-            else:
-                print("No data received")
-                Motor.Brake()
-                time.sleep(1)
-
-    except KeyboardInterrupt:
-        shutdown_event.set()
-        Motor.Brake()
-        enc.stop()
-        print("Program Terminated")
-
-    finally: 
-        shutdown_event.set()
-        enc.stop()
-        capture_thread.join()
-        cv2.destroyAllWindows()
-        exit()
-        print("Program Terminated")
+        else:
+            print("No data received")
+            Motor.Brake()
+            time.sleep(1)
+    
+    
 
 
-if __name__ == "__main__":
-    main()
+
+try:
+    if __name__ == "__main__":
+        main()
+            
+
+except KeyboardInterrupt:
+    shutdown_event.set()
+    Motor.cleanup()
+    enc.stop()
+    print("Program Terminated")
+
+finally: 
+    shutdown_event.set()
+    enc.stop()
+    capture_thread.join()
+    cv2.destroyAllWindows()
+    exit()
+    print("Program Terminated")

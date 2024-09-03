@@ -15,6 +15,8 @@ import os
 ## To get the accurate time 
 import time 
 
+## Control the Servo Pan Tilt HAT 
+from PCA9685_MC import Motor_Controller
 # Verify the model and label files
 model_folder = 'tensorflow_lite_examples'
 model_file = '/mobilenet_v2.tflite'
@@ -38,6 +40,17 @@ else:
 with open(label_path, 'r') as f:
     lines = f.readlines()
     labels = {int(line.strip().split(maxsplit=1)[0]): line.strip().split(maxsplit=1)[1] for line in lines}
+
+
+## Initialise the Motor Controler Library 
+Motor = Motor_Controller() 
+
+##  Control the Pna Tilt HAT using the motor controller
+# Set PanTilt and servo channels
+vertical = 0
+horizontal = 1
+Motor.servoPulse(horizontal, 1250)
+Motor.servoPulse(vertical, 1050)
 
 # Start the camera
 frame_height = 480
@@ -115,6 +128,8 @@ try:
     if __name__ == '__main__':
         object_detection()
 except KeyboardInterrupt:
-    cam.close()
+    cam.stop()
+    Motor.cleanup()
     print("Exiting")
     exit()
+
