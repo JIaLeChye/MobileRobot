@@ -39,10 +39,8 @@ def colorPicker():
         upper_bound = np.array([u_h, u_s, u_v])
         mask = cv2.inRange(hsv, lower_bound, upper_bound) 
         res = cv2.bitwise_and(img, img, mask=mask)
-
-        cv2.imshow("Color_Picker", mask)
-        cv2.imshow("Color_Picker", img)
-        cv2.imshow("Color_Picker", res)
+        stacked = np.hstack((mask, img, res))
+        cv2.imshow("Color_Picker", cv2.resize(stacked, None, fx=0.4, fy=0.4))
         if cv2.waitKey(1) & 0xFF == ord('s'):
             break
     return lower_bound, upper_bound 
