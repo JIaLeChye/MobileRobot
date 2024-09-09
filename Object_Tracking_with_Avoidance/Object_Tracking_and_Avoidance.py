@@ -20,6 +20,13 @@ shutdown_event = threading.Event()
 avoidance_event = threading.Event()
 
 
+vertical = 0
+horizontal = 1
+Motor.servoPulse(horizontal, 1250)
+Motor.servoPulse(vertical, 1050)
+
+
+
 # Thresholds
 MIN_AREA_THRESHOLD = 1500  # Minimum area to detect color
 

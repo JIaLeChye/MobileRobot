@@ -16,8 +16,16 @@ cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size
 cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 cap.start()
 
-motor = Motor_Controller()
+Motor = Motor_Controller()
 enc = Encoder()
+
+vertical = 0
+horizontal = 1
+Motor.servoPulse(horizontal, 1250)
+Motor.servoPulse(vertical, 1050)
+
+
+
 
 def tracking(frame, x,y,w,h):
     
@@ -34,24 +42,24 @@ def tracking(frame, x,y,w,h):
     if center_y < 220 and center_y > 100:
         if center_x < 300:
             print("Turn Left")
-            motor.AntiClock_Rotate(20) 
+            Motor.AntiClock_Rotate(20) 
         if center_x > 340:
             print("Turn Right")
-            motor.Clock_Rotate(20)
+            Motor.Clock_Rotate(20)
         else:
-            motor.Forward(20)
+            Motor.Forward(20)
     # Slow Approch        
     elif center_y > 240 and center_y < 440:
         if center_x < 300:
             print("Turn Left")
-            motor.AntiClock_Rotate(10)
+            Motor.AntiClock_Rotate(10)
         if center_x > 340:
             print("Turn Right")
-            motor.Clock_Rotate(10)
+            Motor.Clock_Rotate(10)
         else:
-            motor.Forward(10)
+            Motor.Forward(10)
     else:
-        motor.Brake()
+        Motor.Brake()
     
     
 
@@ -77,7 +85,7 @@ def main():
             tracking(frame, x,y,w,h)
         else:
             cv2.putText(frame, "Tracking failure", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            motor.Brake() 
+            Motor.Brake() 
         cv2.imshow('Tracking_Area', frame)
         
         # Press 'q' to quit
@@ -93,7 +101,7 @@ except KeyboardInterrupt:
     print("KeyboardInterrupt")
     
 finally:
-    motor.cleanup()
+    Motor.cleanup()
     enc.stop()
     cap.stop()
     cv2.destroyAllWindows()

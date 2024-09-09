@@ -14,6 +14,14 @@ picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 Motor = Motor_Controller()
 enc = Encoder()
 
+
+vertical = 0
+horizontal = 1
+Motor.servoPulse(horizontal, 1250)
+Motor.servoPulse(vertical, 1050)
+
+
+
 def colorPicker(): 
     global picam 
     def nothing(x):

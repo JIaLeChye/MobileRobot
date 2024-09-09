@@ -23,8 +23,8 @@ def init():
 
 
     # Set PanTilt and servo HAT
+    vertical = 0 
     horizontal = 1
-    vertical = 0
     Motor.servoPulse(horizontal, 1250)
     time.sleep(0.1)
     Motor.servoPulse(vertical, 1730)

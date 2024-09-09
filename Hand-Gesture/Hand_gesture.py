@@ -24,6 +24,12 @@ def init():
         cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         cap.start()
 
+
+        vertical = 0
+        horizontal = 1
+        Motor.servoPulse(horizontal, 1250)
+        Motor.servoPulse(vertical, 1050)
+
    
     
         

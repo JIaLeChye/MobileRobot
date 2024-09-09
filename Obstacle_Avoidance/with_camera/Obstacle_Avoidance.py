@@ -17,10 +17,12 @@ def init():
         enc = Encoder(ODISPLAY=True)
         ultrasonic = Ultrasonic()
         Motor = Motor_Controller()
+
         vertical = 0
         horizontal = 1
         Motor.servoPulse(horizontal, 1250)
         Motor.servoPulse(vertical, 1050)
+        
         Speed = 20
         rotation_speed = 50
         threshold = 30 
