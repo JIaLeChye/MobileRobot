@@ -40,6 +40,7 @@ def tracking(frame, x,y,w,h):
             motor.Clock_Rotate(20)
         else:
             motor.Forward(20)
+    # Slow Approch        
     elif center_y > 240 and center_y < 440:
         if center_x < 300:
             print("Turn Left")
@@ -83,15 +84,17 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    cap.stop()  # Release the video capture when done
+      # Release the video capture when done
 
 try:
     if __name__ == '__main__':
         main()
 except KeyboardInterrupt:
     print("KeyboardInterrupt")
+    
+finally:
     motor.cleanup()
     enc.stop()
-finally:
+    cap.stop()
     cv2.destroyAllWindows()
     print("Program Terminated \nExiting....")
