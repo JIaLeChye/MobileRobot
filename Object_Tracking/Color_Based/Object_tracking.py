@@ -1,5 +1,4 @@
 import cv2
-import time
 from picamera2 import Picamera2
 from libcamera import controls
 from PCA9685_MC import Motor_Controller
