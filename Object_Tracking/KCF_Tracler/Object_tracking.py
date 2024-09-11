@@ -78,8 +78,11 @@ def main():
     
     while True:
         frame = cap.capture_array()  # Read frame
+        # Convert the frame from RGBA to BGR (From 4 channel to 1 channel)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         # Tracking mode: update the tracker and draw the tracked bounding box
         success, box = tracker.update(frame)  # Update the tracker with the new frame
+
         if success:
             (x, y, w, h) = [int(v) for v in box]
             tracking(frame, x,y,w,h)
