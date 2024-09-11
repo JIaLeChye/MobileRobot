@@ -46,7 +46,8 @@ def colorPicker():
         upper_bound = np.array([u_h, u_s, u_v])
         mask = cv2.inRange(hsv, lower_bound, upper_bound) 
         res = cv2.bitwise_and(img, img, mask=mask)
-        stacked = np.hstack((mask, img, res))
+        mask_3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        stacked = np.hstack((mask_3, img, res))
         cv2.imshow("Color_Picker", cv2.resize(stacked, None, fx=0.4, fy=0.4))
         if cv2.waitKey(1) & 0xFF == ord('s'):
             break
