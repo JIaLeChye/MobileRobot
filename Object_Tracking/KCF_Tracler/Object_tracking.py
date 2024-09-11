@@ -4,6 +4,7 @@ from PCA9685_MC import Motor_Controller
 from Motor_Encoder import Encoder
 from picamera2 import Picamera2
 from libcamera import controls
+import time
 
 tracker = cv2.TrackerKCF_create() 
 # cap = cv2.VideoCapture(0)
@@ -23,6 +24,9 @@ vertical = 0
 horizontal = 1
 Motor.servoPulse(horizontal, 1250)
 Motor.servoPulse(vertical, 1050)
+# All process should be start after the servo @ camera position is set !
+time.sleep(1)
+
 
 
 
