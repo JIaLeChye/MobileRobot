@@ -1,65 +1,48 @@
 from PCA9685_MC import Motor_Controller
-from Motor_EncoderV2 import Encoder 
+from Motor_EncoderV2 import Encoder
 import time
-import threading 
 
 def init():
-    global enc, Motor , shutdown_event
+    global enc, Motor
     Motor = Motor_Controller() 
     enc = Encoder() 
-    shutdown_event = threading.Event()
-    
 
-def Movement():
-    global Motor, shutdown_event
-    while not shutdown_event.is_set(): 
-        
-        Motor.Forward(20)
-        time.sleep(5)
-        Motor.Brake()
-        time.sleep(1)
-        Motor.Backward(20)
-        time.sleep(5)
-        Motor.Brake()
-        time.sleep(1)
-    
+def move_to_distance(target_distance, target_speed):
+    global Motor, enc
+    Motor.Forward(target_speed)
 
-def encoder():
-    global enc , shutdown_event
-    while not shutdown_event.is_set():
-        
-        Left_enc, Right_enc = enc.encoder()
-        Left_dist, Right_dist = enc.distance()
-        print("Left Motor: {:.2f}".format(Left_enc))
-        print("Right Motor: {:.2f}".format(Right_enc))
-        print("Left Distance: {:.2f}m".format(Left_dist))
-        print("Right Distance: {:.2f}m".format(Right_dist))
-        time.sleep(0.2)
-    
+    while True:
+        # Get the encoder counts and current distance
+        left_enc, right_enc = enc.encoder()
+        left_distance, right_distance = enc.distance()
 
+        # Display encoder values and distances
+        print("Left Encoder: {:.2f}".format(left_enc))
+        print("Right Encoder: {:.2f}".format(right_enc))
+        print("Left Distance: {:.2f}m".format(left_distance))
+        print("Right Distance: {:.2f}m".format(right_distance))
+
+        # Stop the motor once the target distance is reached
+        if right_distance >= target_distance and left_distance >= target_distance:
+            Motor.Brake()
+            break
+
+        time.sleep(0.1)
 
 def cleanup():
-    global Motor, enc, shutdown_event
+    global Motor, enc
+    Motor.cleanup()
+    enc.stop()
 
-    # Set shutdown event
-    while shutdown_event.set(): 
-        # Wait for threads to finish
-        Movement_thred.join()
-        encoder_thred.join()
-
-        # Stop motor and encoder
-        Motor.cleanup()
-        enc.stop()
-
+def main():
+    target_distance = float(input("Enter the target distance (in meters): "))
+    target_speed = float(input("Enter the target spee (1 - 100): "))
+    move_to_distance(target_distance, target_speed )
 if __name__ == '__main__':
-    try: 
+    try:
         init()
-        Movement_thred = threading.Thread(target=Movement)
-        encoder_thred = threading.Thread(target=encoder)
-        Movement_thred.start()
-        encoder_thred.start()
-        
+        # Move the car for 2 meters (adjust this distance as needed)
+        move_to_distance(2.0)
     except KeyboardInterrupt:
         print("Shutting down")
-        cleanup() 
-    
+        cleanup()

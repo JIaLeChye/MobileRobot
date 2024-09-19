@@ -47,7 +47,6 @@ def colorPicker():
 
 
         mask = cv2.inRange(hsv, lower_bound, upper_bound) 
-
         res = cv2.bitwise_and(img, img, mask=mask)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGRA)
         stacked = np.hstack((mask, img, res))
