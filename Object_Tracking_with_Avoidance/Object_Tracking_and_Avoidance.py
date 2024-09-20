@@ -130,7 +130,7 @@ def obstacle_avoidance():
     min_thresh_dist = 10
 
     while avoidance_event.is_set() and not shutdown_event.is_set():
-        left, front, right = ultrasonic.get_distance()
+        left, front, right = ultrasonic.distance()
         if front < threshold or left < threshold or right < threshold:
             print("Obstacle detected, avoiding...")
             if front < threshold:

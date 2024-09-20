@@ -23,7 +23,7 @@ def move_to_distance(target_distance, target_speed):
         print("Right Distance: {:.2f}m".format(right_distance))
 
         # Stop the motor once the target distance is reached
-        if right_distance >= target_distance and left_distance >= target_distance:
+        if right_distance == target_distance and left_distance == target_distance:
             Motor.Brake()
             break
 
