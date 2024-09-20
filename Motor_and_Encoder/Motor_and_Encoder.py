@@ -41,8 +41,7 @@ def main():
 if __name__ == '__main__':
     try:
         init()
-        # Move the car for 2 meters (adjust this distance as needed)
-        move_to_distance(2.0)
+        main()
     except KeyboardInterrupt:
         print("Shutting down")
         cleanup()
