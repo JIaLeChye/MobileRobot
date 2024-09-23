@@ -90,6 +90,7 @@ def color_tracker(lower_bound, upper_bound):
                     cv2.putText(img, f"Center X: {center_x}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
                     cv2.putText(img, f"Center Y: {center_y}", (10, 60), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
                     cv2.putText(img, f"Area: {area}", (10, 90), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                    cv2.circle(img, (center_x, center_y), 5, (0, 0, 255), -1)
 
                     object_detected = True  # Object detected
 
