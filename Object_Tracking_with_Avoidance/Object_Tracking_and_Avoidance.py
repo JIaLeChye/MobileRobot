@@ -1,5 +1,7 @@
 import cv2
 import time
+
+import cv2.line_descriptor
 from picamera2 import Picamera2
 from libcamera import controls
 from PCA9685_MC import Motor_Controller
@@ -72,11 +74,14 @@ def color_tracker(lower_bound, upper_bound):
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-
         if contours:
             for contour in contours:
                 area = cv2.contourArea(contour)
                 if area > MIN_AREA_THRESHOLD:
+                    if avoidance_event.is_set():
+                        avoidance_event.clear() 
+                    else:
+                        pass
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
@@ -113,14 +118,11 @@ def color_tracker(lower_bound, upper_bound):
                     cv2.imshow("Camera", mask)
                     cv2.imshow("Result", img)
 
+                else:
+                    print("No object detected, switching to obstacle avoidance.")
+                    cv2.destroyAllWindows()
+                    avoidance_event.set()
 
-        else:
-            print("No object detected, switching to obstacle avoidance.")
-            cv2.destroyAllWindows()
-            avoidance_event.set()
-            break
-
-        
         if cv2.waitKey(1) == ord('q'):
             shutdown_event.set()
             break
@@ -184,28 +186,27 @@ def obstacle_avoidance():
 
 def main():
     lower_bound, upper_bound = colorPicker()
-
+    cv2.destroyAllWindows()
     while not shutdown_event.is_set():
-        if not avoidance_event.is_set():
-            print("Tracking mode.")
-            color_tracker(lower_bound, upper_bound)
-        if avoidance_event.is_set():
-            print("Switching to obstacle avoidance.")
-            obstacle_avoidance()
+        tracking_thread = threading.Thread(target=color_tracker, args=(lower_bound, upper_bound))
+        avoidance_thread = threading.Thread(target=obstacle_avoidance) 
+        tracking_thread.start()
+        avoidance_thread.start()
 
+    if shutdown_event.is_set():
+        print("Shutting down...")
+        tracking_thread.join()
+        avoidance_thread.join()
+        cv2.destroyAllWindows()
+        Motor.cleanup()
+        enc.stop()
+        picam.stop()
+        print("Program Terminated \n Exiting....")
 
 try:
     if __name__ == '__main__':
-        main_thread = threading.Thread(target=main)
-        main_thread.start()
-        main_thread.join()
-
+        main()
 except KeyboardInterrupt:
     print("KeyboardInterrupt")
 finally:
-    shutdown_event.set()
-    picam.stop()
-    Motor.cleanup()
-    enc.stop()
-    cv2.destroyAllWindows()
     print("Program Terminated \n Exiting....")
