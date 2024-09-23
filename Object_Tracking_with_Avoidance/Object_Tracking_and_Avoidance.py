@@ -96,10 +96,10 @@ def color_tracker(lower_bound, upper_bound):
                     if 80 < center_y < 440:
                         if 50 < center_x < 320:
                             print("Turn right")
-                            Motor.Clock_Rotate(20)
+                            Motor.AntiClock_Rotate(20)
                         elif 400 < center_x < 600:
                             print("Turn left")
-                            Motor.AntiClock_Rotate(20)
+                            Motor.Clock_Rotate(20)
                         elif 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
