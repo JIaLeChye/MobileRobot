@@ -167,11 +167,11 @@ def obstacle_avoidance():
                     Motor.AntiClock_Rotate(rotation_speed)
                     time.sleep(1)
                     Motor.Brake()
-
-            if front > threshold and left > threshold and right > threshold:
-                print("Clear path, switching back to tracking.")
-                avoidance_event.clear()  # Switch back to tracking
-
+                    
+        else:
+            print("No ultrasonic sensors detected.")
+            print("Check Ultrasonic Cable")
+            break
 
 def main():
     lower_bound, upper_bound = colorPicker()
