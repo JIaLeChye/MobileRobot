@@ -108,6 +108,7 @@ def color_tracker(lower_bound, upper_bound):
                             Motor.Brake()
                     else:
                         print("Out of range")
+                        object_detected = False 
                         Motor.Brake()
 
         if not object_detected:
