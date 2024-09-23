@@ -134,6 +134,8 @@ def obstacle_avoidance():
 
     while avoidance_event.is_set() and not shutdown_event.is_set():
         left, front, right = ultrasonic.distances()
+        img = picam.capture_array()
+        cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
         if left and front and right is not None: 
             if front < threshold or left < threshold or right < threshold:
                 print("Obstacle detected, avoiding...")
@@ -168,10 +170,16 @@ def obstacle_avoidance():
                     Motor.AntiClock_Rotate(rotation_speed)
                     time.sleep(1)
                     Motor.Brake()
+            cv2.imshow("Camera", img)
 
         else:
             print("No ultrasonic sensors detected.")
             print("Check Ultrasonic Cable")
+            break
+
+        
+        if cv2.waitKey(1) == ord('q'):
+            shutdown_event.set()
             break
 
 def main():
