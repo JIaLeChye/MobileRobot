@@ -93,7 +93,7 @@ def color_tracker(lower_bound, upper_bound):
 
                     object_detected = True  # Object detected
 
-                    if center_y < 400:
+                    if 80 < center_y < 440:
                         if 50 < center_x < 320:
                             print("Turn right")
                             Motor.Clock_Rotate(20)
