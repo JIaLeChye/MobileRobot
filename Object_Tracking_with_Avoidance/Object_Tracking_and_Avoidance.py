@@ -116,6 +116,7 @@ def color_tracker(lower_bound, upper_bound):
 
         else:
             print("No object detected, switching to obstacle avoidance.")
+            cv2.destroyAllWindows()
             avoidance_event.set()
             break
 
@@ -167,7 +168,7 @@ def obstacle_avoidance():
                     Motor.AntiClock_Rotate(rotation_speed)
                     time.sleep(1)
                     Motor.Brake()
-                    
+
         else:
             print("No ultrasonic sensors detected.")
             print("Check Ultrasonic Cable")
