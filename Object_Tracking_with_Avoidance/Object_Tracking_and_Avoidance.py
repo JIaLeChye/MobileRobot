@@ -72,7 +72,6 @@ def color_tracker(lower_bound, upper_bound):
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        object_detected = False
 
         if contours:
             for contour in contours:
@@ -108,18 +107,19 @@ def color_tracker(lower_bound, upper_bound):
                             print("Out of range")
                             Motor.Brake()
                     else:
-                        print("Out of range")
-                        object_detected = False 
+                        print("Out of range") 
                         Motor.Brake()
+                    
+                    cv2.imshow("Camera", mask)
+                    cv2.imshow("Result", img)
 
-        if not object_detected:
+
+        else:
             print("No object detected, switching to obstacle avoidance.")
             avoidance_event.set()
             break
 
-        cv2.imshow("Camera", mask)
-        cv2.imshow("Result", img)
-
+        
         if cv2.waitKey(1) == ord('q'):
             shutdown_event.set()
             break
@@ -133,43 +133,44 @@ def obstacle_avoidance():
 
     while avoidance_event.is_set() and not shutdown_event.is_set():
         left, front, right = ultrasonic.distances()
-        if front < threshold or left < threshold or right < threshold:
-            print("Obstacle detected, avoiding...")
-            if front < threshold:
-                if front <= min_thresh_dist:
-                    Motor.Backward(Speed)
-                    time.sleep(0.1)
-                    Motor.Brake()
-                elif left < min_thresh_dist and right < min_thresh_dist:
-                    Motor.Backward(Speed)
-                    time.sleep(0.1)
-                    Motor.Brake()
+        if left and front and right is not None: 
+            if front < threshold or left < threshold or right < threshold:
+                print("Obstacle detected, avoiding...")
+                if front < threshold:
+                    if front <= min_thresh_dist:
+                        Motor.Backward(Speed)
+                        time.sleep(0.1)
+                        Motor.Brake()
+                    elif left < min_thresh_dist and right < min_thresh_dist:
+                        Motor.Backward(Speed)
+                        time.sleep(0.1)
+                        Motor.Brake()
+                    elif left < threshold:
+                        Motor.Clock_Rotate(rotation_speed)
+                        time.sleep(0.5)
+                        Motor.Brake()
+                    elif right < threshold:
+                        Motor.AntiClock_Rotate(rotation_speed)
+                        time.sleep(0.5)
+                        Motor.Brake()
+                    else:
+                        Motor.Backward(Speed)
+                        time.sleep(0.1)
+                        Motor.Brake()
+
                 elif left < threshold:
                     Motor.Clock_Rotate(rotation_speed)
-                    time.sleep(0.5)
+                    time.sleep(1)
                     Motor.Brake()
+
                 elif right < threshold:
                     Motor.AntiClock_Rotate(rotation_speed)
-                    time.sleep(0.5)
-                    Motor.Brake()
-                else:
-                    Motor.Backward(Speed)
-                    time.sleep(0.1)
+                    time.sleep(1)
                     Motor.Brake()
 
-            elif left < threshold:
-                Motor.Clock_Rotate(rotation_speed)
-                time.sleep(1)
-                Motor.Brake()
-
-            elif right < threshold:
-                Motor.AntiClock_Rotate(rotation_speed)
-                time.sleep(1)
-                Motor.Brake()
-
-        if front > threshold and left > threshold and right > threshold:
-            print("Clear path, switching back to tracking.")
-            avoidance_event.clear()  # Switch back to tracking
+            if front > threshold and left > threshold and right > threshold:
+                print("Clear path, switching back to tracking.")
+                avoidance_event.clear()  # Switch back to tracking
 
 
 def main():
