@@ -1,15 +1,15 @@
 import cv2
 import time
-
-import cv2.line_descriptor
+import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
 from PCA9685_MC import Motor_Controller
 from Motor_Encoder import Encoder
-import numpy as np
-import threading
 from Ultrasonic_sens import Ultrasonic
+import threading 
 
+
+# Initialize camera, motor, encoder, and ultrasonic sensor
 picam = Picamera2()
 picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
 picam.start()
@@ -17,22 +17,32 @@ picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 Motor = Motor_Controller()
 enc = Encoder()
 ultrasonic = Ultrasonic()
-Frame_Lock = threading.Lock()
-shutdown_event = threading.Event()
-avoidance_event = threading.Event()
 
+# Threading synchronization
+Frame_lock = threading.Lock()
+shutdown_event = threading.Event() 
+latest_frame = None
 
+# Set initial servo position
 vertical = 0
 horizontal = 1
 Motor.servoPulse(horizontal, 1250)
 Motor.servoPulse(vertical, 1050)
-
-
-
 # Thresholds
 MIN_AREA_THRESHOLD = 1500  # Minimum area to detect color
 
 
+
+def camera():
+    global latest_frame 
+    picam.start() 
+    while not shutdown_event.is_set():
+        with Frame_lock:
+            latest_frame = picam.capture_array()
+        time.sleep(0.01) # Prevent high CPU usage
+    picam.stop()
+
+# Color Picker for object tracking
 def colorPicker():
     def nothing(x):
         pass
@@ -46,7 +56,12 @@ def colorPicker():
     cv2.createTrackbar("Upper Value", "Color_Picker", 255, 255, nothing)
 
     while True:
-        img = picam.capture_array()
+        with Frame_lock:
+            if latest_frame is not None:
+                img = latest_frame.copy() # Copy the image from the camera thread
+            else:
+                continue # Skip the proces if no prame available 
+        
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         l_h = cv2.getTrackbarPos("Lower Hue", "Color_Picker")
         l_s = cv2.getTrackbarPos("Lower Saturation", "Color_Picker")
@@ -62,42 +77,43 @@ def colorPicker():
         stacked = np.hstack((mask, img, res))
         cv2.imshow("Color_Picker", cv2.resize(stacked, None, fx=0.4, fy=0.4))
         if cv2.waitKey(1) & 0xFF == ord('s'):
+            cv2.destroyAllWindows()
             break
-
     return lower_bound, upper_bound
 
+# Main function where object tracking and obstacle avoidance happen sequentially
+def main():
+    lower_bound, upper_bound = colorPicker()  # Get color bounds from the color picker
+    cv2.destroyAllWindows()
 
-def color_tracker(lower_bound, upper_bound):
     while not shutdown_event.is_set():
-        img = picam.capture_array()
+        # 1. Run color tracker to check for the object
+        with Frame_lock:
+            if latest_frame is not None:
+                img = latest_frame.copy()
+            else:
+                continue # Skip if no frame available
+
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+        object_detected = False
         if contours:
             for contour in contours:
                 area = cv2.contourArea(contour)
                 if area > MIN_AREA_THRESHOLD:
-                    if avoidance_event.is_set():
-                        avoidance_event.clear() 
-                    else:
-                        pass
+                    object_detected = True  # Object detected
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.circle(img, (x + w // 2, y + h // 2), 5, (0, 0, 255), -1)
+                    cv2.putText(img, "Object", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                    cv2.putText(img, "Area: " + str(area), (x, y + h + 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                    cv2.putText(img, "Center of Object: (" + str(x + w // 2) + ", " + str(y + h // 2) + ")", (x, y + h + 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
 
                     center_x = int(x + w // 2)
                     center_y = int(y + h // 2)
-                    print("Center X:", center_x)
-                    print("Center Y:", center_y)
-                    print("Area:", area)
 
-                    cv2.putText(img, f"Center X: {center_x}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.putText(img, f"Center Y: {center_y}", (10, 60), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.putText(img, f"Area: {area}", (10, 90), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.circle(img, (center_x, center_y), 5, (0, 0, 255), -1)
-
-                    object_detected = True  # Object detected
-
+                    # Motor control based on object's center position
                     if 80 < center_y < 440:
                         if 50 < center_x < 320:
                             print("Turn right")
@@ -109,104 +125,66 @@ def color_tracker(lower_bound, upper_bound):
                             Motor.Forward(20)
                             print("Centered")
                         else:
-                            print("Out of range")
                             Motor.Brake()
                     else:
-                        print("Out of range") 
-                        Motor.Brake()
-                    
-                    cv2.imshow("Camera", mask)
-                    cv2.imshow("Result", img)
-
+                        object_detected = False
                 else:
-                    print("No object detected, switching to obstacle avoidance.")
-                    cv2.destroyAllWindows()
-                    avoidance_event.set()
+                    object_detected = False
+                    cv2.imshow("Tracking", img)
+                    break  # Exit after detecting and processing one object
 
-        if cv2.waitKey(1) == ord('q'):
-            shutdown_event.set()
-            break
+        elif not object_detected and (not contours or area < MIN_AREA_THRESHOLD):
+            print("No object detected, switching to obstacle avoidance.")
+            cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
+            Speed = 20
+            rotation_speed = 15
+            threshold = 30
+            min_thresh_dist = 10
 
-
-def obstacle_avoidance():
-    Speed = 20
-    rotation_speed = 15
-    threshold = 30
-    min_thresh_dist = 10
-
-    while avoidance_event.is_set() and not shutdown_event.is_set():
-        left, front, right = ultrasonic.distances()
-        img = picam.capture_array()
-        cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
-        if left and front and right is not None: 
-            if front < threshold or left < threshold or right < threshold:
-                print("Obstacle detected, avoiding...")
-                if front < threshold:
-                    if front <= min_thresh_dist:
-                        Motor.Backward(Speed)
-                        time.sleep(0.1)
-                        Motor.Brake()
-                    elif left < min_thresh_dist and right < min_thresh_dist:
-                        Motor.Backward(Speed)
-                        time.sleep(0.1)
-                        Motor.Brake()
+            left, front, right = ultrasonic.distances()
+            if left and front and right is not None:
+                if front < threshold or left < threshold or right < threshold:
+                    if front < threshold:
+                        if front <= min_thresh_dist:
+                            Motor.Backward(Speed)
+                        elif left < min_thresh_dist and right < min_thresh_dist:
+                            Motor.Backward(Speed)
+                        elif left < threshold:
+                            Motor.Clock_Rotate(rotation_speed)
+                        elif right < threshold:
+                            Motor.AntiClock_Rotate(rotation_speed)
+                        else:
+                            Motor.Backward(Speed)
                     elif left < threshold:
                         Motor.Clock_Rotate(rotation_speed)
-                        time.sleep(0.5)
-                        Motor.Brake()
                     elif right < threshold:
                         Motor.AntiClock_Rotate(rotation_speed)
-                        time.sleep(0.5)
-                        Motor.Brake()
-                    else:
-                        Motor.Backward(Speed)
-                        time.sleep(0.1)
-                        Motor.Brake()
+                else:
+                    Motor.Forward(Speed)
+            cv2.imshow("Obstacle Avoidance", img)
 
-                elif left < threshold:
-                    Motor.Clock_Rotate(rotation_speed)
-                    time.sleep(1)
-                    Motor.Brake()
-
-                elif right < threshold:
-                    Motor.AntiClock_Rotate(rotation_speed)
-                    time.sleep(1)
-                    Motor.Brake()
-            cv2.imshow("Camera", img)
-
-        else:
-            print("No ultrasonic sensors detected.")
-            print("Check Ultrasonic Cable")
-            break
-
-        
+        # Check for user input to quit the program
         if cv2.waitKey(1) == ord('q'):
-            shutdown_event.set()
+            print("Shutting down...")
+            cv2.destroyAllWindows()
+            Motor.cleanup()
+            enc.stop()
+            picam.stop()
+            print("Program Terminated \n Exiting....")
             break
-
-def main():
-    lower_bound, upper_bound = colorPicker()
-    cv2.destroyAllWindows()
-    while not shutdown_event.is_set():
-        tracking_thread = threading.Thread(target=color_tracker, args=(lower_bound, upper_bound))
-        avoidance_thread = threading.Thread(target=obstacle_avoidance) 
-        tracking_thread.start()
-        avoidance_thread.start()
-
-    if shutdown_event.is_set():
-        print("Shutting down...")
-        tracking_thread.join()
-        avoidance_thread.join()
-        cv2.destroyAllWindows()
-        Motor.cleanup()
-        enc.stop()
-        picam.stop()
-        print("Program Terminated \n Exiting....")
 
 try:
     if __name__ == '__main__':
+        camera_thread = threading.Thread(target=camera)
+        camera_thread.start()
         main()
 except KeyboardInterrupt:
     print("KeyboardInterrupt")
 finally:
+    shutdown_event.set()
+    camera_thread.join()
+    cv2.destroyAllWindows()
+    Motor.cleanup()
+    enc.stop()
+    picam.stop()
     print("Program Terminated \n Exiting....")
