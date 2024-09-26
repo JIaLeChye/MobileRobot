@@ -116,12 +116,12 @@ def main():
                     # Motor control based on object's center position
                     if 80 < center_y < 440:
                         if 50 < center_x < 320:
-                            print("Turn right")
+                            print("Turn Left")
                             Motor.AntiClock_Rotate(20)
-                        elif 400 < center_x < 600:
-                            print("Turn left")
+                        if 400 < center_x < 600:
+                            print("Turn Right")
                             Motor.Clock_Rotate(20)
-                        elif 320 <= center_x <= 400:
+                        if 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
                         else:
