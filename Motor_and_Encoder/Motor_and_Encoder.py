@@ -1,11 +1,12 @@
 from PCA9685_MC import Motor_Controller
 from Motor_EncoderV2 import Encoder
 import time
+import threading 
 
 def init():
     global enc, Motor
     Motor = Motor_Controller() 
-    enc = Encoder() 
+    enc = Encoder(debug=True, wheel_diameter=9.8) 
 
 def move_to_distance(target_distance, target_speed):
     global Motor, enc
@@ -36,7 +37,7 @@ def cleanup():
 
 def main():
     target_distance = float(input("Enter the target distance (in meters): "))
-    target_speed = float(input("Enter the target spee (1 - 100): "))
+    target_speed = float(input("Enter the target speed (1 - 100): "))
     move_to_distance(target_distance, target_speed )
 if __name__ == '__main__':
     try:

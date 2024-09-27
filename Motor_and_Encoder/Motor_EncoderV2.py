@@ -37,6 +37,7 @@ class Encoder:
                 print("Gear Ratio =", self.gear_ratio)
                 print("Left Hall Sensor Pin =", self.LEFT_HALLSEN_A, "," , self.LEFT_HALLSEN_B)
                 print("Right Hall Sensor Pin =", self.RIGHT_HALLSEN_A, "," ,self.RIGHT_HALLSEN_B)
+                print("Wheel Diameter =", self.wheel_diameter)
                 print("OLED Display Enabled =", self.ODISPLAY)
                 print("OLED address =", self.OLED_addr)
                 print("Debug Mode Enabled =", self.debug)
@@ -140,14 +141,21 @@ class Encoder:
             self.oled.text("Right Motor:", 1, 40, 1)
             self.oled.text("{:.2f} rpm".format(right_rpm), 1, 55, 1)
             self.oled.show()
-        
+        if self.debug: 
+            print("Left RPM: {:.2f}".format(left_rpm))
+            print("Right RPM: {:.2f}".format(right_rpm))
+            print("Pulse detected at Left: {:.2f},  ".format(left_pulse_count))
+            print("Pulse detected at Right: {:.2f}".format(right_pulse_count))
         return left_rpm, right_rpm
         
     def left_update(self, channel):
         """
         Callback function for left encoder interrupt.
         """
+
         self.left_enc_val += 1  # Forward
+        if self.debug:
+            print("Left Encoder Value:", self.left_enc_val)
 
 
     def right_update(self, channel):
@@ -156,6 +164,9 @@ class Encoder:
         """
        
         self.right_enc_val += 1  # Forward
+        if self.debug: 
+            print("Right Encoder Value:", self.right_enc_val)
+
    
 
     def distance(self):
