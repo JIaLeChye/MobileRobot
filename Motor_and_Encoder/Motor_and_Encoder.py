@@ -1,5 +1,5 @@
 from PCA9685_MC import Motor_Controller
-from Motor_EncoderV2 import Encoder
+from Motor_EncoderV3 import Encoder
 import time
 import threading 
 
