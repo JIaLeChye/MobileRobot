@@ -76,9 +76,12 @@ def test_basic_movements(robot):
     robot.stop()
     time.sleep(1)
 
-def test_horizontal_movement(robot, shift_pos, speed):
+def test_horizontal_movement(robot):
     
     print("\nTesting horizontal movements...") 
+    shift_pos = input('Enter Shift Position (L, R)')
+    speed = int(input("Enter speed (1-100): "))
+    
     # Shift Left 
     if shift_pos == 'L':
         print("Testing Shift Left...")
@@ -97,7 +100,8 @@ def test_horizontal_movement(robot, shift_pos, speed):
 
     else:
         print("Invalid Shift Position")
-        return
+        robot.Brake()
+        
 
 def test_distance_movement(robot, oled_objects):
     print("\nTesting distance movements...")
@@ -346,9 +350,7 @@ def main():
             elif choice == '10':
                 test_buzzer(robot, oled_objects)
             elif choice == '11':
-                shift_pos = input('Enter Shift Position (L, R)')
-                speed = int(input("Enter speed (1-100): "))
-                test_horizontal_movement(robot, shift_pos, speed)
+                test_horizontal_movement(robot)
             else:
                 print("Invalid choice!")
                 
