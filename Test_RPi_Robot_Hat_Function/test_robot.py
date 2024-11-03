@@ -42,6 +42,7 @@ def test_menu():
     print("8. Battery voltage test")
     print("9. Servo test")
     print("10. Buzzer test (Mario theme)")
+    print("11. Horizontal movements test")
     print("0. Exit")
 
 def test_basic_movements(robot):
@@ -78,7 +79,6 @@ def test_basic_movements(robot):
 def test_horizontal_movement(robot, shift_pos, speed):
     
     print("\nTesting horizontal movements...") 
-    shift_pos = input('Enter Shift Position (L, R)')
     # Shift Left 
     if shift_pos == 'L':
         print("Testing Shift Left...")
@@ -345,6 +345,10 @@ def main():
                 test_servos(robot, oled_objects)
             elif choice == '10':
                 test_buzzer(robot, oled_objects)
+            elif choice == '11':
+                shift_pos = input('Enter Shift Position (L, R)')
+                speed = int(input("Enter speed (1-100): "))
+                test_horizontal_movement(robot, shift_pos, speed)
             else:
                 print("Invalid choice!")
                 
