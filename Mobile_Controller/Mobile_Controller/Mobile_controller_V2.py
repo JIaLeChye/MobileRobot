@@ -63,9 +63,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=Freq, turn=10) #Every turn is +10 deg (Turn Left)
+				Motor.Horizontal_Left(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V3")
@@ -74,9 +74,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=Freq, turn= -10) # Every turn is -10 deg (Turn Right)
+				Motor.Horizontal_Right(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V5")

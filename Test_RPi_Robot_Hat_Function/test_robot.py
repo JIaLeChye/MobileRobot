@@ -84,23 +84,16 @@ def test_horizontal_movement(robot):
     
     # Shift Left 
     if shift_pos == 'L':
-        print("Testing Shift Left...")
-        robot.set_motor('LF', -speed)
-        robot.set_motor('RF', speed)
-        robot.set_motor('LB', speed)
-        robot.set_motor('RB', -speed)
+        robot.Horizontal_Right(speed)
         time.sleep(2)
-        robot.stop()
+        robot.Brake()
     
     # Shift Right
     elif shift_pos == 'R':
         print("Testing Shift Right...")
-        robot.set_motor('LF', speed)
-        robot.set_motor('RF', -speed)
-        robot.set_motor('LB', -speed)
-        robot.set_motor('RB', speed)
+        robot.Horizontal_Left(speed)
         time.sleep(2)
-        robot.stop()
+        robot.Brake()
 
     else:
         print("Invalid Shift Position")

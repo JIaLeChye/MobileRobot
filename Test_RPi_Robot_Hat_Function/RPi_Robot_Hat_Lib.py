@@ -35,7 +35,7 @@ class RobotController:
         self.REG_LINE_SENSOR = 15
         self.REG_LINE_ANALOG = 16
         self.REG_VOLTAGE = 17
-
+    ##-- Communication section----##
     def _read_byte(self, reg):
         """Read a byte from an I2C register"""
         try:
@@ -51,7 +51,12 @@ class RobotController:
             self.bus.write_byte_data(self.address, reg, value)
         except Exception as e:
             print(f"Error writing to register {reg}: {e}")
-            
+
+    ####################################
+
+
+
+    ##---------Movement Section-------##
     def Forward(self, speed):
         """Move forward with specified speed (0-100)"""
         self.move(speed)  # Positive speed for forward
@@ -82,6 +87,46 @@ class RobotController:
         """Stop all motors"""
         self.stop()
 
+    def Horizontal_Right(self, speed):
+        """Move Horizontal Right with specified spedd (0 - 100)"""
+        self.set_motor('LF', -abs(speed))
+        self.set_motor('RF', abs(speed))
+        self.set_motor('LB', abs(speed))
+        self.set_motor('RB', -abs(speed))
+    
+
+    def Horizontal_Left(self, speed):
+        """Move Horizontal Left with specified spedd (0 - 100)"""
+        self.set_motor('LF', abs(speed))
+        self.set_motor('RF', -abs(speed))
+        self.set_motor('LB', -abs(speed))
+        self.set_motor('RB', abs(speed))
+    
+
+    def set_motor(self, motor, speed):
+       """Set motor speed (-100 to 100)"""
+       motor_registers = {
+           'RF': self.REG_MOTOR_RF,
+           'RB': self.REG_MOTOR_RB,
+           'LF': self.REG_MOTOR_LF,
+           'LB': self.REG_MOTOR_LB
+       }
+       
+       speed = max(-100, min(100, speed))
+       if speed >= 0:
+           byte_value = int(speed * 127 / 100)
+       else:
+           byte_value = 256 + int(speed * 127 / 100)
+           
+       try:
+           self._write_byte(motor_registers[motor], byte_value)
+       except Exception as e:
+           print(f"Error setting motor speed: {e}")
+           self.stop() # Stop all Motor
+    ############################################
+
+
+    ##-----Motor Encoder Section------##
     def get_encoder(self, motor):
         """Get encoder count for a specific motor"""
         encoder_registers = {
@@ -117,27 +162,7 @@ class RobotController:
         except Exception as e:
             print(f"Error calculating distance for {motor}: {e}")
             return 0
-
-    def set_motor(self, motor, speed):
-        """Set motor speed (-100 to 100)"""
-        motor_registers = {
-            'RF': self.REG_MOTOR_RF,
-            'RB': self.REG_MOTOR_RB,
-            'LF': self.REG_MOTOR_LF,
-            'LB': self.REG_MOTOR_LB
-        }
         
-        speed = max(-100, min(100, speed))
-        if speed >= 0:
-            byte_value = int(speed * 127 / 100)
-        else:
-            byte_value = 256 + int(speed * 127 / 100)
-            
-        try:
-            self._write_byte(motor_registers[motor], byte_value)
-        except Exception as e:
-            print(f"Error setting motor speed: {e}")
-
     def move_distance(self, distance, speed=50):
         """Move the robot a specific distance in meters with error checking"""
         print(f"\nMoving {distance:.2f} meters at speed {speed}")
@@ -209,12 +234,11 @@ class RobotController:
                     break
                     
         print("Movement completed.")
+    #################################################
 
-    def stop(self):
-        """Stop all motors"""
-        for motor in ['RF', 'RB', 'LF', 'LB']:
-            self.set_motor(motor, 0)
+    
 
+    ##--------Servo Movement section--------## 
     def set_servo(self, servo_num, angle):
         """
         Set servo position (0-180 degrees)
@@ -236,6 +260,12 @@ class RobotController:
         except Exception as e:
             print(f"Error setting servo angle: {e}")
 
+
+    ##########################################
+
+
+
+    ##----Line Following sensor section-----##
     def read_line_sensors(self):
         """Read the digital line sensors (5 bits)"""
         try:
@@ -251,7 +281,12 @@ class RobotController:
         except Exception as e:
             print(f"Error reading analog line sensor: {e}")
             return 0
+        
+    ##########################################
 
+
+
+    ##------------Battery Section-----------## 
     def get_battery(self):
         """Read battery voltage"""
         try:
@@ -260,7 +295,12 @@ class RobotController:
         except Exception as e:
             print(f"Error reading voltage: {e}")
             return 0
+    
+    #############################################
 
+
+
+    ##-------Encoder Calibration Section-------## 
     def calibrate_distance(self):
         """Run calibration procedure"""
         print("\nDistance Calibration Tool")
@@ -295,7 +335,11 @@ class RobotController:
         if avg_dist != 0:
             self.calibration_factor = actual / avg_dist
             print(f"\nNew calibration factor: {self.calibration_factor:.3f}")
-            
+    ##########################################
+
+
+
+    ##-------Buzzer and Sound Section-------##        
     def play_tone(self, frequency, duration):
         """
         Play a tone on the buzzer
@@ -321,6 +365,15 @@ class RobotController:
         except Exception as e:
             print(f"Error playing tone: {e}")
 
+    #############################################
+
+
+    ##--------Clean Up anb Stop Section--------##
+    def stop(self):
+        """Stop all motors"""
+        for motor in ['RF', 'RB', 'LF', 'LB']:
+            self.set_motor(motor, 0)
+
     def cleanup(self):
         """Clean up resources"""
         self.stop()
@@ -331,6 +384,8 @@ class RobotController:
         if hasattr(self, 'buzzer_pwm'):
             self.buzzer_pwm.stop()
             GPIO.cleanup(12)  # Cleanup buzzer GPIO
+
+
 
 def test():
     """Simple test function"""
