@@ -75,6 +75,30 @@ def test_basic_movements(robot):
     robot.stop()
     time.sleep(1)
 
+def test_horizontal_movement(robot, shift_pos, speed):
+    
+    print("\nTesting horizontal movements...") 
+    shift_pos = input('Enter Shift Position (L, R)')
+    # Shift Left 
+    if shift_pos == 'L':
+        print("Testing Shift Left...")
+        robot.set_motor('LF', -speed)
+        robot.set_motor('RF', speed)
+        robot.set_motor('LB', speed)
+        robot.set_motor('RB', -speed)
+    
+    # Shift Right
+    if shift_pos == 'R':
+        print("Testing Shift Right...")
+        robot.set_motor('LF', speed)
+        robot.set_motor('RF', -speed)
+        robot.set_motor('LB', -speed)
+        robot.set_motor('RB', speed)
+
+    else:
+        print("Invalid Shift Position")
+        return
+
 def test_distance_movement(robot, oled_objects):
     print("\nTesting distance movements...")
     distance = float(input("Enter distance in meters: "))
