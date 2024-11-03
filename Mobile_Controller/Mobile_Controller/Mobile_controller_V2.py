@@ -63,9 +63,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Horizontal_Left(Freq)
+				Robot.Horizontal_Left(Freq)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V3")
@@ -74,9 +74,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Horizontal_Right(Freq)
+				Robot.Horizontal_Right(Freq)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V5")
@@ -85,9 +85,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Clock_Rotate(Freq)
+				Robot.move(speed=Freq, turn=-10)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V6")
@@ -96,22 +96,22 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.AntiClock_Rotate(Freq)
+				Robot.move(speed=Freq, turn=10)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	blynk.sync_virtual(0,1,2,3,4)
 
 	while True: 
-	 	enc.encoder()
 		blynk.run()
 		blynk.virtual_write(8, Freq)
+		 
 		# time.sleep(0.2)
 		status = blynk.state
 		if status == 0:
 			print("Reconnecting...")
-			Motor.Brake()
+			Robot.Brake()
 			time.sleep(2)
 			blynk.connect()
 			
@@ -130,7 +130,7 @@ except KeyboardInterrupt:
   Freq = 0 
   blynk.virtual_write(4, Freq)
   blynk.virtual_write(8, Freq)
-  Motor.Brake()
+  Robot.Brake()
 #   enc.stop()
   sys.exit(0)
 
