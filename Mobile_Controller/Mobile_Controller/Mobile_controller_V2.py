@@ -85,7 +85,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=Freq, turn=-10)
+				Robot.move(speed=0, turn=-10)
 			if VPin == 0 :
 				Robot.Brake()
 		else:
@@ -96,7 +96,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=Freq, turn=10)
+				Robot.move(speed=0, turn=10)
 			if VPin == 0 :
 				Robot.Brake()
 		else:
