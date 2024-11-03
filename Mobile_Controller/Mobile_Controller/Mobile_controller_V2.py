@@ -1,5 +1,4 @@
-from PCA9685_MC import Motor_Controller 
-from Motor_Encoder import Encoder 
+from RPi_Robot_Hat_Lib import RobotController 
 import BlynkLib
 import time
 import sys
@@ -8,16 +7,15 @@ AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
 	
-enc = Encoder(ODISPLAY= False)
-print("Initializing Motor Controller...")
-Motor = Motor_Controller()
-print("Motor Controller Initialized")
+Robot = RobotController()
+print("Robot Controller Connection Established")
 blynk = BlynkLib.Blynk(AUTH) 
 print("Blynk Connection Established")
 Freq = 0
 blynk.virtual_write(4,0)
-Motor.Brake()
-		
+Robot.Brake() 
+print("Robot Stopped") 
+		 
 
 
 
@@ -42,9 +40,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Forward(Freq)
+				Robot.Forward(Freq)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	
@@ -54,9 +52,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Backward(Freq)
+				Robot.Backward(Freq)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V2")
@@ -65,9 +63,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Horizontal_Left(Freq)
+				Robot.move(speed=Freq, turn=10) #Every turn is +10 deg (Turn Left)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V3")
@@ -76,9 +74,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Horizontal_Right(Freq)
+				Robot.move(speed=Freq, turn= -10) # Every turn is -10 deg (Turn Right)
 			if VPin == 0 :
-				Motor.Brake()
+				Robot.Brake()
 		else:
 			pass
 	@blynk.on("V5")

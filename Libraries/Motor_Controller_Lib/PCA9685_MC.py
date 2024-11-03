@@ -169,16 +169,20 @@ class Motor_Controller:
         """
         
         FREQ = (Freq/100 * 19999)
+        # Move Backward
         self.PWM.setServoPulse(self.F_M1A , 0)
         self.PWM.setServoPulse(self.F_M1B , FREQ)
+        #Move Forward
         self.PWM.setServoPulse(self.F_M2A , FREQ)
         self.PWM.setServoPulse(self.F_M2B , 0)
         
 
         
         #Back Motor Driver
+        #Move Forward
         self.PWM.setServoPulse(self.B_M1A, FREQ)
         self.PWM.setServoPulse(self.B_M1B, 0)
+        #Move Backward
         self.PWM.setServoPulse(self.B_M2A, 0)
         self.PWM.setServoPulse(self.B_M2B, FREQ)
         if self.debug:
@@ -195,14 +199,17 @@ class Motor_Controller:
         
         
         FREQ = (Freq/100 * 19999)
+        # Move Forward
         self.PWM.setServoPulse(self.F_M1A , FREQ)
         self.PWM.setServoPulse(self.F_M1B , 0)
+
         self.PWM.setServoPulse(self.F_M2A , 0)
         self.PWM.setServoPulse(self.F_M2B , FREQ)
         
         #Back Motor Driver
         self.PWM.setServoPulse(self.B_M1A, 0)
         self.PWM.setServoPulse(self.B_M1B, FREQ)
+        
         self.PWM.setServoPulse(self.B_M2A, FREQ)
         self.PWM.setServoPulse(self.B_M2B, 0)
         if self.debug:
