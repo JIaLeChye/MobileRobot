@@ -89,6 +89,8 @@ def test_horizontal_movement(robot):
         robot.set_motor('RF', speed)
         robot.set_motor('LB', speed)
         robot.set_motor('RB', -speed)
+        time.sleep(2)
+        robot.stop()
     
     # Shift Right
     if shift_pos == 'R':
@@ -97,6 +99,8 @@ def test_horizontal_movement(robot):
         robot.set_motor('RF', -speed)
         robot.set_motor('LB', -speed)
         robot.set_motor('RB', speed)
+        time.sleep(2)
+        robot.stop()
 
     else:
         print("Invalid Shift Position")
