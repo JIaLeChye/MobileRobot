@@ -79,7 +79,7 @@ def test_basic_movements(robot):
 def test_horizontal_movement(robot):
     
     print("\nTesting horizontal movements...") 
-    shift_pos = input('Enter Shift Position (L, R)')
+    shift_pos = input('Enter Shift Position (L, R): ')
     speed = int(input("Enter speed (1-100): "))
     
     # Shift Left 
@@ -93,7 +93,7 @@ def test_horizontal_movement(robot):
         robot.stop()
     
     # Shift Right
-    if shift_pos == 'R':
+    elif shift_pos == 'R':
         print("Testing Shift Right...")
         robot.set_motor('LF', speed)
         robot.set_motor('RF', -speed)
