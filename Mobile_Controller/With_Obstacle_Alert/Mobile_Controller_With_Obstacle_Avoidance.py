@@ -1,5 +1,4 @@
-from PCA9685_MC import Motor_Controller 
-from Motor_Encoder import Encoder 
+from RPi_Robot_Hat_Lib import RobotController 
 import BlynkLib
 import time
 from Ultrasonic_sens import Ultrasonic 
@@ -8,9 +7,7 @@ AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
 
-enc = Encoder(ODISPLAY=False)
-print("Initializing Motor Controller...")
-Motor = Motor_Controller()
+Motor = RobotController()
 print("Motor Controller Initialized")
 blynk = BlynkLib.Blynk(AUTH) 
 print("Blynk Connection Established")
@@ -89,7 +86,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.Clock_Rotate(Freq)
+				Motor.move(speed=0, turn=Freq)
 			if VPin == 0 :
 				Motor.Brake()
 		else:
@@ -100,7 +97,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Motor.AntiClock_Rotate(Freq)
+				Motor.move(speed=0, turn=-Freq)
 			if VPin == 0 :
 				Motor.Brake()
 		else:
@@ -111,7 +108,6 @@ def main():
 	
 	while True: 
 		blynk.run()
-		enc.encoder()
 		left,front,right = obstacleSens.distances()
 		Reverse = ReverseSens.status() 
 		# print("Reverse: "+ str(Reverse))
@@ -164,7 +160,8 @@ except KeyboardInterrupt:
   blynk.virtual_write(4, Freq)
   blynk.virtual_write(8, Freq)
   Motor.Brake()
-  enc.stop()
+  Motor.cleanup()
+
 
 
 	
