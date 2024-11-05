@@ -63,7 +63,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Horizontal_Right(Freq)
+				Robot.Horizontal_Left(Freq)
 			if VPin == 0 :
 				Robot.Brake()
 		else:
@@ -74,7 +74,7 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Horizontal_Left(Freq)
+				Robot.Horizontal_Right(Freq)
 			if VPin == 0 :
 				Robot.Brake()
 		else:
