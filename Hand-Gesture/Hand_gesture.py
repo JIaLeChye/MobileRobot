@@ -1,8 +1,7 @@
 import cv2
 import mediapipe as mp
 from picamera2 import Picamera2
-from Motor_Encoder import Encoder 
-from PCA9685_MC import Motor_Controller
+from RPi_Robot_Hat_Lib import RobotController
 
   
 
@@ -11,8 +10,7 @@ def init():
         Initialize motor controller, encoder, mediapipe hands and camera 
         """
         global mp_hands, hands, cap, mp_drawing, Motor, enc
-        Motor = Motor_Controller()
-        enc = Encoder(ODISPLAY= True)
+        Motor = RobotController()
         # Initialize MediaPipe Hands
         mp_hands = mp.solutions.hands
         hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1,
@@ -27,8 +25,8 @@ def init():
 
         vertical = 0
         horizontal = 1
-        Motor.servoPulse(horizontal, 1250)
-        Motor.servoPulse(vertical, 1050)
+        Motor.set_servo(horizontal, 180)
+        Motor.set_servo(vertical, 90)
 
    
     
@@ -69,10 +67,10 @@ def control_car(hand_landmarks):
         
         if direction == "left":
                 print("Turn left")
-                Motor.AntiClock_Rotate(15)
+                Motor.move(speed= 0 , turn=15)
         elif direction == "right":
                 print("Turn right")
-                Motor.Clock_Rotate(15)
+                Motor.move(speed=0, turn=-15)
         else:
                 # Move the car forward or stop based on distance
                 if distance == "close":
@@ -95,7 +93,7 @@ def main():
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 # Detect hand landmarks using MediaPipe Hands
                 results = hands.process(frame_bgr)
-                enc.encoder()
+                # enc.encoder()
 
                 # Draw hand landmarks on the frame
                 if results.multi_hand_landmarks:
@@ -121,6 +119,6 @@ try:
 except KeyboardInterrupt:
         cv2.destroyAllWindows()
         Motor.Brake()
-        enc.stop()
+        # enc.stop()
 
 
