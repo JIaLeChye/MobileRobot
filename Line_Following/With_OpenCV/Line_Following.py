@@ -3,8 +3,7 @@ from libcamera import controls
 import cv2
 import numpy as np
 import time
-from Motor_Encoder import Encoder
-from PCA9685_MC import Motor_Controller
+from RPi_Robot_Hat_Lib import RobotController 
 
 def init():
     """
@@ -17,17 +16,16 @@ def init():
     """
     global picam2, horizontal, vertical, frame_center, Motor, enc
     # Initialise the Motor
-    Motor = Motor_Controller()
-    enc = Encoder(ODISPLAY= True)
+    Motor = RobotController()
     
 
 
     # Set PanTilt and servo HAT
-    vertical = 0 
-    horizontal = 1
-    Motor.servoPulse(horizontal, 1250)
+    vertical = 1
+    horizontal = 2
+    Motor.set_servo(vertical, 180)
     time.sleep(0.1)
-    Motor.servoPulse(vertical, 1730)
+    Motor.set_servo(horizontal, 90)
 
     # Set preview configuration (modify resolution as needed)
     picam2 = Picamera2()
@@ -54,7 +52,6 @@ def main():
     init()
 
     while True:
-        enc.encoder()
         frame = picam2.capture_array()
         
         
@@ -90,14 +87,14 @@ def main():
             
             if cx >= 350:
                 print("Going Left")
-                Motor.Clock_Rotate(15)
+                Motor.move(speed=0, turn=-15)
             
             if cx < 350 and cx > 300:
                 print("On track")
                 Motor.Forward(20)
             if cx < 300:
                 print("Going Right")
-                Motor.AntiClock_Rotate(15)
+                Motor.move(speed =0 , turn=15)
 
       
             
@@ -124,7 +121,6 @@ try:
         main()
         
 except KeyboardInterrupt:
-    Motor.servoPulse(horizontal,0)
-    Motor.servoPulse(vertical,0)
     Motor.Brake()
+    Motor.cleanup()
     
