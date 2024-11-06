@@ -16,7 +16,7 @@ import os
 import time 
 
 ## Control the Servo Pan Tilt HAT 
-from PCA9685_MC import Motor_Controller
+from RPi_Robot_Hat_Lib import RobotController 
 # Verify the model and label files
 model_folder = 'tensorflow_lite_examples'
 model_file = '/mobilenet_v2.tflite'
@@ -43,14 +43,14 @@ with open(label_path, 'r') as f:
 
 
 ## Initialise the Motor Controler Library 
-Motor = Motor_Controller() 
+Motor = RobotController() 
 
 ##  Control the Pna Tilt HAT using the motor controller
 # Set PanTilt and servo channels
-vertical = 0
-horizontal = 1
-Motor.servoPulse(horizontal, 1250)
-Motor.servoPulse(vertical, 1050)
+vertical = 1
+horizontal = 2
+Motor.set_servo(vertical, 80)
+Motor.set_servo(horizontal, 90)
 
 # Start the camera
 frame_height = 480

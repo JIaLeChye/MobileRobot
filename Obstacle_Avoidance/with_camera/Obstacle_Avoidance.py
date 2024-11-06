@@ -2,38 +2,31 @@ import threading
 import cv2 
 from picamera2 import Picamera2
 from Ultrasonic_sens import Ultrasonic 
-from PCA9685_MC import Motor_Controller
-from Motor_Encoder import Encoder 
+from RPi_Robot_Hat_Lib import RobotController 
 import time 
 from libcamera import controls
 
 
-def init():
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist, picam2, frame_lock, shutdown_event, isInit
-    isInit = False
+ # enc = Encoder(ODISPLAY=True)
+ultrasonic = Ultrasonic()
+Motor = RobotController()
+vertical = 1
+horizontal = 2
+Motor.set_servo(vertical, 80)
+Motor.set_servo(horizontal, 90)
 
-    if not isInit: 
-        
-        enc = Encoder(ODISPLAY=True)
-        ultrasonic = Ultrasonic()
-        Motor = Motor_Controller()
-
-        vertical = 0
-        horizontal = 1
-        Motor.servoPulse(horizontal, 1250)
-        Motor.servoPulse(vertical, 1050)
-        
-        Speed = 20
-        rotation_speed = 50
-        threshold = 30 
-        min_thresh_dist = 10 
-        picam2 = Picamera2() 
-        picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
-        picam2.start()
-        picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-        frame_lock = threading.Lock()
-        shutdown_event = threading.Event()
-        isInit = True 
+Speed = 20
+rotation_speed = 50
+threshold = 30 
+min_thresh_dist = 10 
+picam2 = Picamera2() 
+picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+picam2.start()
+picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+frame_lock = threading.Lock()
+capture_thread = threading.Thread(target=capture_frame)  # Start the capture frame thread
+shutdown_event = threading.Event()
+isInit = True 
 
 
 # Capture and Display Frame 
@@ -50,8 +43,6 @@ def capture_frame():
 
 
 def obstacle_Avoid(left, front, right):
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist
-    
     if front < threshold:
         if front <= min_thresh_dist:
             print("Reversing")
@@ -65,12 +56,12 @@ def obstacle_Avoid(left, front, right):
             Motor.Brake()
         elif left < threshold:
             print("Turning Right") 
-            Motor.Clock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=-rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         elif right < threshold:
             print("Turning Left") 
-            Motor.AntiClock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         else:
@@ -81,13 +72,13 @@ def obstacle_Avoid(left, front, right):
     
     elif left < threshold:
         print("Turning Right")
-        Motor.Clock_Rotate(rotation_speed)
+        Motor.move(speed=0, turn=-rotation_speed)
         time.sleep(1)
         Motor.Brake()
     
     elif right < threshold:
         print("Turning Left") 
-        Motor.AntiClock_Rotate(rotation_speed)  
+        Motor.move(speed=0, turn=rotation_speed)  
         time.sleep(1)
         Motor.Brake()
     
@@ -97,27 +88,21 @@ def obstacle_Avoid(left, front, right):
             Motor.Forward(Speed)
         elif right > threshold:
             print("Turning Right")
-            Motor.Clock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=-rotation_speed)
             time.sleep(0.1)
             Motor.Brake()
         elif left > threshold:
             print("Turning Left")
-            Motor.AntiClock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=rotation_speed)
             time.sleep(0.1)
             Motor.Brake()
 
 
 def main(): 
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist, picam2, shutdown_event
-    
-    init()
     print("Program Started")
-    
-    capture_thread = threading.Thread(target=capture_frame)  # Start the capture frame thread
     capture_thread.start()
-
     while not shutdown_event.is_set():
-        enc.encoder()
+        # enc.encoder()
         left, front, right = ultrasonic.distances()
         time.sleep(0.1)
         if left is not None and front is not None and right is not None: 
@@ -144,12 +129,12 @@ try:
 except KeyboardInterrupt:
     shutdown_event.set()
     Motor.cleanup()
-    enc.stop()
+    # enc.stop()
     print("Program Terminated")
 
 finally: 
     shutdown_event.set()
-    enc.stop()
+    # enc.stop()
     capture_thread.join()
     cv2.destroyAllWindows()
     exit()

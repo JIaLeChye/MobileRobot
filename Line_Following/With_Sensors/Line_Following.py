@@ -1,53 +1,43 @@
-from PCA9685_MC import Motor_Controller 
-from Motor_Encoder import Encoder 
+from RPi_Robot_Hat_Lib import RobotController 
 import time 
 import RPi.GPIO as GPIO 
 
-def init():  
-    global Motor, enc, D1, D2, D3, D4, D5
-    Motor = Motor_Controller()
-    enc = Encoder(debug = True) 
-    GPIO.setmode(GPIO.BCM)
-    D1 = 6 
-    D2 = 11
-    D3 = 13
-    D4 = 17 
-    D5 = 19 
 
-    GPIO.setup(D1, GPIO.IN)
-    GPIO.setup(D2, GPIO.IN)
-    GPIO.setup(D3, GPIO.IN)
-    GPIO.setup(D4, GPIO.IN)
-    GPIO.setup(D5, GPIO.IN)
-    print("GPIO Setup Complete")
+Motor = RobotController() 
+GPIO.setmode(GPIO.BCM)
+D1 = 6 
+D2 = 11
+D3 = 13
+D4 = 17 
+D5 = 19 
+GPIO.setup(D1, GPIO.IN)
+GPIO.setup(D2, GPIO.IN)
+GPIO.setup(D3, GPIO.IN)
+GPIO.setup(D4, GPIO.IN)
+GPIO.setup(D5, GPIO.IN)
+print("GPIO Setup Complete")
 
 
 
 def main():
-    global Motor, enc, D1, D2, D3, D4, D5
-    init()
     while True: 
-        enc.encoder()
-        # GPIO.setup(D1, GPIO.IN)
-        # GPIO.setup(D2, GPIO.IN)
-        # GPIO.setup(D3, GPIO.IN)
-        # GPIO.setup(D4, GPIO.IN)
-        # GPIO.setup(D5, GPIO.IN)
-        outerRight = GPIO.input(D1)
-        Right = GPIO.input(D2)
-        center =  GPIO.input(D3)
-        Left  = GPIO.input(D4)
-        outerLeft = GPIO.input(D5) 
+        # enc.encoder()
+        Line_Sensor = Motor.read_line_sensors()
+        outerRight = Line_Sensor[0]
+        Right = Line_Sensor[1]
+        center =  Line_Sensor[2]
+        Left  = Line_Sensor[3]
+        outerLeft = Line_Sensor[4]
         if outerRight == 0 and Right == 0 and center == 0 and Left == 0 and outerLeft == 0:
             Motor.Brake()
             print("Brake")
 
         if (outerRight == 1 or Right == 1) and center == 0 and Left == 0 and outerLeft == 0:
             print("Turn Right")  # Normal clockwise rotation
-            Motor.Clock_Rotate(20)
+            Motor.move(speed=0, turn=-20)
 
         if (outerLeft == 1 or Left == 1) and center == 0 and Right == 0 and outerRight == 0:
-            Motor.AntiClock_Rotate(20)
+            Motor.move(speed=0, turn=20)
             print("Turn Left")  # Normal anticlockwise rotation
 
         if (center == 1 and Right == 1 and Left == 1 and outerLeft == 0 and outerRight == 0) or (center == 1 and Right == 0 and Left == 0 and outerRight == 0 and outerLeft == 0):
@@ -65,5 +55,5 @@ try:
 
 except KeyboardInterrupt: 
     Motor.cleanup()
-    enc.stop()
+    # enc.stop()
     print("Program Stopped")

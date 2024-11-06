@@ -1,8 +1,7 @@
 import cv2
 from picamera2 import Picamera2
 from libcamera import controls
-from PCA9685_MC import Motor_Controller
-from Motor_Encoder import Encoder
+from RPi_Robot_Hat_Lib import RobotController 
 import numpy as np
 
 
@@ -11,14 +10,12 @@ picam = Picamera2()
 picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
 picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-Motor = Motor_Controller()
-enc = Encoder()
+Motor = RobotController()
 
-
-vertical = 0
-horizontal = 1
-Motor.servoPulse(horizontal, 1250)
-Motor.servoPulse(vertical, 1050)
+vertical = 1
+horizontal = 2
+Motor.set_servo(vertical, 80)
+Motor.set_servo(horizontal, 1050)
 
 
 
@@ -87,10 +84,10 @@ def main():
                     if center_y < 400:
                         if 50 < center_x < 320:
                             print("Turn right")
-                            Motor.Clock_Rotate(20)
+                            Motor.move(speed=0, turn=-20)
                         elif 400 < center_x < 600:
                             print("Turn left")
-                            Motor.AntiClock_Rotate(20)
+                            Motor.move(speed=0, turn=20)
                         elif 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
@@ -114,6 +111,6 @@ except KeyboardInterrupt:
 finally:
     picam.stop()
     Motor.cleanup()
-    enc.stop()
+    # enc.stop()
     cv2.destroyAllWindows()
     print("Program Terminated \n Exiting....")

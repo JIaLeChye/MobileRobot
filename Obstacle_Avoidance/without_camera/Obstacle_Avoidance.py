@@ -1,29 +1,21 @@
 from Ultrasonic_sens import Ultrasonic 
-from PCA9685_MC import Motor_Controller
-from Motor_Encoder import Encoder 
+from RPi_Robot_Hat_Lib import RobotController
 import time 
 
 
 
-def init():
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist, isInit
-    isInit = False
-
-    if not isInit: 
         
-        enc = Encoder(debug=True)
-        ultrasonic = Ultrasonic(debug=True)
-        Motor = Motor_Controller()
-        Speed = 20
-        rotation_speed = 15
-        threshold = 30 
-        min_thresh_dist = 10 
-        isInit = True 
-    else: 
-        pass
+# enc = Encoder(debug=True)
+ultrasonic = Ultrasonic(debug=True)
+Motor = RobotController()
+Speed = 20
+rotation_speed = 15
+threshold = 30 
+min_thresh_dist = 10 
+isInit = True 
+
 
 def obstacle_Avoid(left, front, right):
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist
     
     if front < threshold:
         if front <= min_thresh_dist:
@@ -35,11 +27,11 @@ def obstacle_Avoid(left, front, right):
             time.sleep(0.1)
             Motor.Brake()
         elif left < threshold:
-            Motor.Clock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=-rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         elif right < threshold:
-            Motor.AntiClock_Rotate(rotation_speed)
+            Motor.move(speed=0, turn=rotation_speed)
             time.sleep(0.5)
             Motor.Brake()
         else:
@@ -48,12 +40,12 @@ def obstacle_Avoid(left, front, right):
             Motor.Brake()
     
     elif left < threshold:
-        Motor.Clock_Rotate(rotation_speed)
+        Motor.move(speed=0, turn=-rotation_speed)
         time.sleep(1)
         Motor.Brake()
     
     elif right < threshold:
-        Motor.AntiClock_Rotate(rotation_speed)  
+        Motor.move(speed=0, turn=rotation_speed)  
         time.sleep(1)
         Motor.Brake()
     
@@ -66,11 +58,9 @@ def obstacle_Avoid(left, front, right):
             
 
 
-def main(): 
-    global enc, ultrasonic, Motor, Speed, rotation_speed, threshold, min_thresh_dist
-    init() 
+def main():  
     while True: 
-        enc.encoder()
+        # enc.encoder()
         left, front, right = ultrasonic.distances()
         time.sleep(0.1)
         if left is not None and front is not None and right is not None: 
@@ -92,10 +82,10 @@ try:
 
 except KeyboardInterrupt:
     Motor.Brake()
-    enc.stop()
+    # enc.stop()
     print("Program Terminated")
 finally:
-    enc.stop()
+    # enc.stop()
     Motor.cleanup()
     print("Program Terminated")
 

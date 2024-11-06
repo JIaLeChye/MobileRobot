@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
-from PCA9685_MC import Motor_Controller
-from Motor_Encoder import Encoder
+from RPi_Robot_Hat_Lib import RobotController
 from picamera2 import Picamera2
 from libcamera import controls
 import time
@@ -17,13 +16,13 @@ cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size
 cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 cap.start()
 
-Motor = Motor_Controller()
-enc = Encoder()
+Motor = RobotController()
+# enc = Encoder()
 
-vertical = 0
-horizontal = 1
-Motor.servoPulse(horizontal, 1250)
-Motor.servoPulse(vertical, 1050)
+vertical = 1
+horizontal = 2
+Motor.set_servo(vertical, 80)
+Motor.set_servo(horizontal, 90)
 # All process should be start after the servo @ camera position is set !
 time.sleep(1)
 
@@ -42,24 +41,24 @@ def tracking(frame, x,y,w,h):
     center_y = y + h // 2
     cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)  # Draw a circle at the center
     # Tracking Logic 
-    enc.encoder() 
+    # enc.encoder() 
     if center_y < 220 and center_y > 100:
         if center_x < 300:
             print("Turn Left")
-            Motor.AntiClock_Rotate(20) 
+            Motor.move(speed=0, turn=20) 
         if center_x > 340:
             print("Turn Right")
-            Motor.Clock_Rotate(20)
+            Motor.move(speed=0, turn=-20)
         else:
             Motor.Forward(20)
     # Slow Approch        
     elif center_y > 240 and center_y < 440:
         if center_x < 300:
             print("Turn Left")
-            Motor.AntiClock_Rotate(10)
+            Motor.move(speed=0, turn=10)
         if center_x > 340:
             print("Turn Right")
-            Motor.Clock_Rotate(10)
+            Motor.move(speed=0, turn=-10)
         else:
             Motor.Forward(10)
     else:
@@ -109,7 +108,7 @@ except KeyboardInterrupt:
     
 finally:
     Motor.cleanup()
-    enc.stop()
+    # enc.stop()
     cap.stop()
     cv2.destroyAllWindows()
     print("Program Terminated \nExiting....")

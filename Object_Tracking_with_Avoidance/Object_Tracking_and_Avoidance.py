@@ -3,8 +3,7 @@ import time
 import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
-from PCA9685_MC import Motor_Controller
-from Motor_Encoder import Encoder
+from RPi_Robot_Hat_Lib import RobotController 
 from Ultrasonic_sens import Ultrasonic
 import threading 
 
@@ -14,8 +13,8 @@ picam = Picamera2()
 picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
 picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-Motor = Motor_Controller()
-enc = Encoder()
+Motor = RobotController()
+# enc = Encoder()
 ultrasonic = Ultrasonic()
 
 # Threading synchronization
@@ -24,10 +23,10 @@ shutdown_event = threading.Event()
 latest_frame = None
 
 # Set initial servo position
-vertical = 0
-horizontal = 1
-Motor.servoPulse(horizontal, 1250)
-Motor.servoPulse(vertical, 1050)
+vertical = 1
+horizontal = 2
+Motor.set_servo(vertical, 1250)
+Motor.set_servo(horizontal, 1050)
 # Thresholds
 MIN_AREA_THRESHOLD = 1500  # Minimum area to detect color
 
@@ -117,10 +116,10 @@ def main():
                     if 80 < center_y < 440:
                         if 50 < center_x < 320:
                             print("Turn Left")
-                            Motor.AntiClock_Rotate(20)
+                            Motor.move(speed=0, turn=20)
                         if 400 < center_x < 600:
                             print("Turn Right")
-                            Motor.Clock_Rotate(20)
+                            Motor.move(speed=0,turn=-20)
                         if 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
@@ -150,15 +149,15 @@ def main():
                         elif left < min_thresh_dist and right < min_thresh_dist:
                             Motor.Backward(Speed)
                         elif left < threshold:
-                            Motor.Clock_Rotate(rotation_speed)
+                            Motor.move(speed=0,turn=-rotation_speed)
                         elif right < threshold:
-                            Motor.AntiClock_Rotate(rotation_speed)
+                            Motor.move(speed=0, turn=rotation_speed)
                         else:
                             Motor.Backward(Speed)
                     elif left < threshold:
-                        Motor.Clock_Rotate(rotation_speed)
+                        Motor.move(speed=0, turn=-rotation_speed)
                     elif right < threshold:
-                        Motor.AntiClock_Rotate(rotation_speed)
+                        Motor.move(speed=0, turn=rotation_speed)
                 else:
                     Motor.Forward(Speed)
             cv2.imshow("Obstacle Avoidance", img)
@@ -168,7 +167,7 @@ def main():
             print("Shutting down...")
             cv2.destroyAllWindows()
             Motor.cleanup()
-            enc.stop()
+            # enc.stop()
             picam.stop()
             print("Program Terminated \n Exiting....")
             break
@@ -185,6 +184,6 @@ finally:
     camera_thread.join()
     cv2.destroyAllWindows()
     Motor.cleanup()
-    enc.stop()
+    # enc.stop()
     picam.stop()
     print("Program Terminated \n Exiting....")
