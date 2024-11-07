@@ -6,11 +6,11 @@ import time
 
         
 # enc = Encoder(debug=True)
-ultrasonic = Ultrasonic(debug=True)
+ultrasonic = Ultrasonic()
 Motor = RobotController()
-Speed = 20
-rotation_speed = 15
-threshold = 30 
+Speed = 40
+rotation_speed = 30
+threshold = 20
 min_thresh_dist = 10 
 isInit = True 
 
@@ -19,41 +19,51 @@ def obstacle_Avoid(left, front, right):
     
     if front < threshold:
         if front <= min_thresh_dist:
+            print("Motion: Backward")
             Motor.Backward(Speed)
             time.sleep(0.1)
-            Motor.Brake()
+            # Motor.Brake()
         elif left < min_thresh_dist and right < min_thresh_dist:
+            print("Motion: Backward")
             Motor.Backward(Speed)
             time.sleep(0.1)
-            Motor.Brake()
+            # Motor.Brake()
         elif left < threshold:
-            Motor.move(speed=0, turn=-rotation_speed)
-            time.sleep(0.5)
-            Motor.Brake()
-        elif right < threshold:
+            print("Motion: Rotate Right")
             Motor.move(speed=0, turn=rotation_speed)
             time.sleep(0.5)
-            Motor.Brake()
+            # Motor.Brake()
+        elif right < threshold:
+            print("Motion: Rotate Left")
+            Motor.move(speed=0, turn=-rotation_speed)
+            time.sleep(0.5)
+            # Motor.Brake()
         else:
+            print("Motion: Backward")
             Motor.Backward(Speed)
             time.sleep(0.1)
-            Motor.Brake()
+            # Motor.Brake()
     
     elif left < threshold:
-        Motor.move(speed=0, turn=-rotation_speed)
+        print("Motion: Rotate Right")
+        Motor.move(speed=0, turn=rotation_speed)
         time.sleep(1)
-        Motor.Brake()
+        # Motor.Brake()
     
     elif right < threshold:
-        Motor.move(speed=0, turn=rotation_speed)  
+        print("Motion: Rotate Left")
+        Motor.move(speed=0, turn=-rotation_speed)  
         time.sleep(1)
-        Motor.Brake()
+        # Motor.Brake()
     
-    elif right < threshold and left < threshold and front > threshold :
+    elif right > threshold and left > threshold and front > threshold :
+            print("Motion: Forward")
             Motor.Forward(Speed)
             time.sleep(0.1)
-            Motor.Brake()
+            # Motor.Brake()
     else:
+        print("Motion: Brake")
+        print("Unknown Condition Found ")
         Motor.Brake()
             
 
