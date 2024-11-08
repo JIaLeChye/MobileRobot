@@ -12,10 +12,10 @@ picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 Motor = RobotController()
 
-vertical = 1
-horizontal = 2
-Motor.set_servo(vertical, 80)
-Motor.set_servo(horizontal, 1050)
+vertical = 2
+horizontal = 1
+Motor.set_servo(vertical, 180)
+Motor.set_servo(horizontal, 90)
 
 
 

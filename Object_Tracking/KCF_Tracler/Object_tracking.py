@@ -19,9 +19,9 @@ cap.start()
 Motor = RobotController()
 # enc = Encoder()
 
-vertical = 1
-horizontal = 2
-Motor.set_servo(vertical, 80)
+vertical = 2
+horizontal = 1
+Motor.set_servo(vertical, 180)
 Motor.set_servo(horizontal, 90)
 # All process should be start after the servo @ camera position is set !
 time.sleep(1)
