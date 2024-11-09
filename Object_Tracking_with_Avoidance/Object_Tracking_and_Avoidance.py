@@ -25,6 +25,7 @@ shutdown_event = threading.Event()
 latest_frame = None
 Tracking_wind = False 
 Avoidance_wind = False 
+print("Global Variable Set ")
 
 
 
@@ -38,6 +39,8 @@ Motor.set_servo(horizontal, 90)
 MIN_AREA_THRESHOLD = 15000  # Minimum area to detect color
 threshold = 30 # Threshod for obstacle avoidance 
 min_thresh_dist = 10 # Minimum threshoold for obstacle avoidance
+print("Initialasition Complete")
+
 
 
 
