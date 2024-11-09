@@ -8,6 +8,7 @@ from Ultrasonic_sens import Ultrasonic
 import threading 
 
 
+
 # Initialize camera, motor, encoder, and ultrasonic sensor
 picam = Picamera2()
 picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
@@ -19,15 +20,25 @@ ultrasonic = Ultrasonic()
 # Threading synchronization
 Frame_lock = threading.Lock()
 shutdown_event = threading.Event() 
+
+# Declare global variable 
 latest_frame = None
+Tracking_wind = False 
+Avoidance_wind = False 
+
+
+
 
 # Set initial servo position
 vertical = 2
 horizontal = 1
 Motor.set_servo(vertical, 130)
-Motor.set_servo(horizontal, 1050)
+Motor.set_servo(horizontal, 90)
 # Thresholds
-MIN_AREA_THRESHOLD = 1500  # Minimum area to detect color
+MIN_AREA_THRESHOLD = 15000  # Minimum area to detect color
+threshold = 30 # Threshod for obstacle avoidance 
+min_thresh_dist = 10 # Minimum threshoold for obstacle avoidance
+
 
 
 
@@ -98,10 +109,16 @@ def main():
         object_detected = False
         if contours:
             for contour in contours:
-                area = cv2.contourArea(contour)
+                contours = sorted(contours, key=cv2.contourArea, reverse=True)
+                largest_contour = contours[0] 
+                area = cv2.contourArea(largest_contour)
                 if area > MIN_AREA_THRESHOLD:
+                    if Avoidance_wind is True:
+                        cv2.destroyWindow("Obstacle Avoidance")
+                        Tracking_wind = True
+                    cv2.putText(img, "Object Tracking Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 0, 255), 2)
                     object_detected = True  # Object detected
-                    x, y, w, h = cv2.boundingRect(contour)
+                    x, y, w, h = cv2.boundingRect(largest_contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                     cv2.circle(img, (x + w // 2, y + h // 2), 5, (0, 0, 255), -1)
                     cv2.putText(img, "Object", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
@@ -116,29 +133,35 @@ def main():
                         if 50 < center_x < 320:
                             print("Turn Left")
                             Motor.move(sped= 0,  turn=20)
-                        if 400 < center_x < 600:
+                        elif 400 < center_x < 600:
                             print("Turn Right")
                             Motor.move(speed=0, turn=-20)
-                        if 320 <= center_x <= 400:
+                        elif 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
                         else:
                             Motor.Brake()
+                    if  380 < center_y < 400:
+                        Motor.Brake()
+                        print("Object Found")
+                        cv2.putText(img, "Object Found", (240, 320), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 4)
                     else:
                         object_detected = False
-                else:
-                    object_detected = False
                     cv2.imshow("Tracking", img)
-                    break  # Exit after detecting and processing one object
+                else:
+                    cv2.destroyAllWindows()
+                    object_detected = False
 
-        elif not object_detected and (not contours or area < MIN_AREA_THRESHOLD):
+        #2. Obstacle Avoidance 
+        elif not object_detected and area < MIN_AREA_THRESHOLD:
+            if Tracking_wind is True:
+                cv2.destroyWindow("Tracking")
+                Avoidance_wind = True
             print("No object detected, switching to obstacle avoidance.")
             cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
-            Speed = 20
-            rotation_speed = 15
-            threshold = 30
-            min_thresh_dist = 10
-
+            Speed = 30
+            rotation_speed = 20
+            Motor.Brake()
             left, front, right = ultrasonic.distances()
             if left and front and right is not None:
                 if front < threshold or left < threshold or right < threshold:
