@@ -18,10 +18,6 @@ print("Robot Stopped")
 		 
 
 
-
-
-
-
 @blynk.on("connected")
 def blynk_connected():
 	print("Blynk server Conected")

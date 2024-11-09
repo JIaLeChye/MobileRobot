@@ -20,27 +20,26 @@ ultrasonic = Ultrasonic()
 # Threading synchronization
 Frame_lock = threading.Lock()
 shutdown_event = threading.Event() 
+Avoidance_event = threading.Event() 
 
 # Declare global variable 
 latest_frame = None
-Tracking_wind = False 
-Avoidance_wind = False 
+Tracking_mode = False 
+Avoidance_mode = False 
+
 print("Global Variable Set ")
-
-
 
 
 # Set initial servo position
 vertical = 2
 horizontal = 1
-Motor.set_servo(vertical, 130)
+Motor.set_servo(vertical, 160)
 Motor.set_servo(horizontal, 90)
 # Thresholds
-MIN_AREA_THRESHOLD = 15000  # Minimum area to detect color
+MIN_AREA_THRESHOLD = 3000 # Minimum area to detect color
 threshold = 30 # Threshod for obstacle avoidance 
 min_thresh_dist = 10 # Minimum threshoold for obstacle avoidance
 print("Initialasition Complete")
-
 
 
 
@@ -72,7 +71,7 @@ def colorPicker():
             if latest_frame is not None:
                 img = latest_frame.copy() # Copy the image from the camera thread
             else:
-                continue # Skip the proces if no prame available 
+                continue # Skip the proces if no frame available 
         
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         l_h = cv2.getTrackbarPos("Lower Hue", "Color_Picker")
@@ -93,8 +92,69 @@ def colorPicker():
             break
     return lower_bound, upper_bound
 
+
+            
+def avoidance_mode():
+    global Avoidance_mode,object_detected 
+    # print("Avoidance Mode: ", Avoidance_mode)
+    # print("shutdown_event: ", shutdown_event.is_set())
+    # print("Avoidance_event: ", Avoidance_event.is_set())
+    while not shutdown_event.is_set(): 
+        # print("Avoidance Mode: ", Avoidance_mode)
+        # print("shutdown_event: ", shutdown_event.is_set())
+        # print("Avoidance_event: ", Avoidance_event.is_set())
+        while Avoidance_event.is_set() and not shutdown_event.is_set():
+            # with Frame_lock:
+            #     if latest_frame is not None:
+            #         img = latest_frame.copy()
+            print("No object detected, switching to obstacle avoidance.")
+            Speed = 40
+            rotation_speed = 30
+            Motor.Brake()
+            left,front,right = ultrasonic.distances()
+            if left is not None  and front is not None  and right is not None:
+                print("left: {:.2f}".format(left))
+                print("front: {:.2f}".format(front) )
+                print("right: {:.2f}".format(right))
+                if front < threshold or left < threshold or right < threshold:
+                    if front < threshold:
+                        if front <= min_thresh_dist:
+                            Motor.Backward(Speed)
+                            time.sleep(0.1)
+                        elif left < min_thresh_dist and right < min_thresh_dist:
+                            Motor.Backward(Speed)
+                            time.sleep(0.1)
+                        elif left < threshold:
+                            Motor.move(speed=0, turn=rotation_speed)
+                            time.sleep(0.1)
+                        elif right < threshold:
+                            Motor.move(speed=0, turn=-rotation_speed)
+                            time.sleep(0.1)
+                        else:
+                            Motor.Backward(Speed)
+                    elif left < threshold:
+                        Motor.move(speed=0, turn=rotation_speed)
+                        time.sleep(0.1)
+                    elif right < threshold:
+                        Motor.move(speed=0, turn=-rotation_speed)
+                        time.sleep(0.1)
+                else:
+                    Motor.Forward(Speed)
+            else:
+                print("No data received")
+                Motor.Brake()
+                time.sleep(1)
+            time.sleep(0.5)
+        else:
+            # print("Avoidance event is not set")
+            pass
+           
+
+    
+
 # Main function where object tracking and obstacle avoidance happen sequentially
 def main():
+    global Tracking_mode, Avoidance_mode, object_detected
     lower_bound, upper_bound = colorPicker()  # Get color bounds from the color picker
     cv2.destroyAllWindows()
 
@@ -104,87 +164,83 @@ def main():
             if latest_frame is not None:
                 img = latest_frame.copy()
             else:
-                continue # Skip if no frame available
+                print("No frame available")
+                break  # Skip if no frame available
 
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         object_detected = False
         if contours:
-            for contour in contours:
-                contours = sorted(contours, key=cv2.contourArea, reverse=True)
-                largest_contour = contours[0] 
-                area = cv2.contourArea(largest_contour)
-                if area > MIN_AREA_THRESHOLD:
-                    if Avoidance_wind is True:
-                        cv2.destroyWindow("Obstacle Avoidance")
-                        Tracking_wind = True
-                    cv2.putText(img, "Object Tracking Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 0, 255), 2)
-                    object_detected = True  # Object detected
-                    x, y, w, h = cv2.boundingRect(largest_contour)
-                    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    cv2.circle(img, (x + w // 2, y + h // 2), 5, (0, 0, 255), -1)
-                    cv2.putText(img, "Object", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.putText(img, "Area: " + str(area), (x, y + h + 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.putText(img, "Center of Object: (" + str(x + w // 2) + ", " + str(y + h // 2) + ")", (x, y + h + 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+            contours = sorted(contours, key=cv2.contourArea, reverse=True)
+            largest_contour = contours[0] 
+            area = cv2.contourArea(largest_contour)
+            if area > MIN_AREA_THRESHOLD:
+                if Avoidance_mode:
+                    cv2.destroyWindow("Obstacle Avoidance")
+                    Tracking_mode = True
+                    Avoidance_mode = False
+                    Avoidance_event.clear()
 
-                    center_x = int(x + w // 2)
-                    center_y = int(y + h // 2)
+                cv2.putText(img, "Object Tracking Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 0, 255), 2)
+                object_detected = True  # Object detected
+                x, y, w, h = cv2.boundingRect(largest_contour)
+                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.circle(img, (x + w // 2, y + h // 2), 5, (0, 0, 255), -1)
+                cv2.putText(img, "Object", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(img, "Area: " + str(area), (x, y + h + 20), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(img, "Center of Object: (" + "x: " + str(x + w // 2) + ", " + "y: " + str(y + h // 2) + ")", (10, 60), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                
 
-                    # Motor control based on object's center position
-                    if 80 < center_y < 440:
-                        if 50 < center_x < 320:
-                            print("Turn Left")
-                            Motor.move(sped= 0,  turn=20)
-                        elif 400 < center_x < 600:
-                            print("Turn Right")
-                            Motor.move(speed=0, turn=-20)
-                        elif 320 <= center_x <= 400:
-                            Motor.Forward(20)
-                            print("Centered")
-                        else:
-                            Motor.Brake()
-                    if  380 < center_y < 400:
-                        Motor.Brake()
-                        print("Object Found")
-                        cv2.putText(img, "Object Found", (240, 320), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 4)
+                center_x = int(x + w // 2)
+                center_y = int(y + h // 2)
+
+                # Motor control based on object's center position
+                if 80 < center_y < 440:
+                    if 50 < center_x < 320:
+                        print("Turn Left")
+                        Motor.move(speed=0, turn=-30)
+                    elif 400 < center_x < 600:
+                        print("Turn Right")
+                        Motor.move(speed=0, turn=30)
+                    elif 320 <= center_x <= 400:
+                        Motor.Forward(40)
+                        print("Centered")
                     else:
-                        object_detected = False
-                    cv2.imshow("Tracking", img)
+                        Motor.Brake()
+                if  (370 < center_y < 400) or area > 30000:
+                    Motor.Brake()
+                    print("Object Found")
+                    cv2.putText(img, "Object Found", (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 4)
                 else:
-                    cv2.destroyAllWindows()
                     object_detected = False
-
-        #2. Obstacle Avoidance 
-        elif not object_detected and area < MIN_AREA_THRESHOLD:
-            if Tracking_wind is True:
+                    if not Avoidance_mode:
+                        Avoidance_mode = True
+                        Avoidance_event.set()
+                        print("Switching to Avoidance mode")
+                cv2.imshow("Tracking", img)
+            else:
                 cv2.destroyWindow("Tracking")
-                Avoidance_wind = True
-            print("No object detected, switching to obstacle avoidance.")
+                object_detected = False
+                if not Avoidance_mode:
+                    Avoidance_mode = True
+                    Avoidance_event.set()
+                    print("Switching to Avoidance mode")
+                # Avoidance_event.set()
+                # print("Avoidance Mode: ", Avoidance_mode)
+                # print("shutdown_event: ", shutdown_event.is_set())
+                # print("Avoidance_event: ", Avoidance_event.is_set())
+                cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
+                cv2.imshow("Obstacle Avoidance", img)
+        else:
+            if not Avoidance_mode:
+                Avoidance_mode = True
+                Avoidance_event.set()
+                print("Switching to Avoidance mode")
+            if Tracking_mode:
+                cv2.destroyWindow("Tracking")
+                Tracking_mode = False
             cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
-            Speed = 30
-            rotation_speed = 20
-            Motor.Brake()
-            left, front, right = ultrasonic.distances()
-            if left and front and right is not None:
-                if front < threshold or left < threshold or right < threshold:
-                    if front < threshold:
-                        if front <= min_thresh_dist:
-                            Motor.Backward(Speed)
-                        elif left < min_thresh_dist and right < min_thresh_dist:
-                            Motor.Backward(Speed)
-                        elif left < threshold:
-                            Motor.move(speed=0,turn=-rotation_speed)
-                        elif right < threshold:
-                            Motor.move(speed=0, turn=rotation_speed)
-                        else:
-                            Motor.Backward(Speed)
-                    elif left < threshold:
-                        Motor.move(speed=0, turn=-rotation_speed)
-                    elif right < threshold:
-                        Motor.move(sped=0, turn=rotation_speed)
-                else:
-                    Motor.Forward(Speed)
             cv2.imshow("Obstacle Avoidance", img)
 
         # Check for user input to quit the program
@@ -194,19 +250,28 @@ def main():
             Motor.cleanup()
             picam.stop()
             print("Program Terminated \n Exiting....")
-            break
+            shutdown_event.set()
+            
+
 
 try:
     if __name__ == '__main__':
         camera_thread = threading.Thread(target=camera)
+        Avoidance_thread = threading.Thread(target=avoidance_mode) 
+
         camera_thread.start()
+        Avoidance_thread.start()
+
         main()
 except KeyboardInterrupt:
     print("KeyboardInterrupt")
 finally:
     shutdown_event.set()
+    Avoidance_event.clear()
     camera_thread.join()
     cv2.destroyAllWindows()
+    Motor.Brake
     Motor.cleanup()
     picam.stop()
     print("Program Terminated \n Exiting....")
+    exit()
