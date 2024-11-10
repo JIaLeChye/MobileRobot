@@ -360,6 +360,8 @@ class RobotController:
                 self.buzzer_pwm.ChangeDutyCycle(50)
                 time.sleep(duration)
                 self.buzzer_pwm.ChangeDutyCycle(0)
+                time.sleep(0.1)
+                GPIO.cleanup(12)  # Cleanup buzzer GPIO
             else:
                 time.sleep(duration)
                 
