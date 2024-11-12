@@ -1,14 +1,29 @@
 import smbus
 import time
+import board 
+import busio 
+import adafruit_ssd1306 
+from PIL import Image, ImageDraw, ImageFont
 import math
 import RPi.GPIO as GPIO
 
 class RobotController:
     
-    def __init__(self, wheel_diameter=97):  # diameter in mm
+    def __init__(self, wheel_diameter=97, OLED_addr=0x3c, debug=False,):  # diameter in mm
         # Setup I2C communication
         self.address = 0x09
         self.bus = smbus.SMBus(1)
+
+        self.OLED_addr = OLED_addr 
+        self.i2c = busio.I2C(board.SCL, board.SDA) 
+        self.disp = adafruit_ssd1306.SSD1306_I2C(128, 64, self.i2c, addr=self.OLED_addr)
+        self.disp.fill(0) 
+        self.image = Image.new("1", (self.disp.width, self.disp.height)) 
+        self.draw = ImageDraw.Draw(self.image)
+        self.font = ImageFont.load_default()
+
+        self.debug = debug 
+        self.rpm_init = False 
         
         # Robot physical parameters
         self.WHEEL_DIAMETER = wheel_diameter / 1000.0  # Convert to meters
@@ -36,6 +51,14 @@ class RobotController:
         self.REG_LINE_SENSOR = 15
         self.REG_LINE_ANALOG = 16
         self.REG_VOLTAGE = 17
+        self.REG_ENCODER_RESET = 18
+        self.REG_SYSTEM_RESET = 19
+        self.lib_ver= "1.0.0"
+
+    def __version__(self):
+        print(f"RPi_Robot_Hat_Lib Version: {self.lib_ver}")
+
+
     ##-- Communication section----##
     def _read_byte(self, reg):
         """Read a byte from an I2C register"""
@@ -53,6 +76,33 @@ class RobotController:
         except Exception as e:
             print(f"Error writing to register {reg}: {e}")
 
+    def reset_encoders(self):
+        """Reset all encoder counts to zero"""
+        try:
+            self._write_byte(self.REG_ENCODER_RESET, 0xA5)
+            time.sleep(0.1)  # Give the coprocessor time to process the reset
+            return True
+        except Exception as e:
+            print(f"Error resetting encoders: {e}")
+            return False
+        
+    def reset_system(self):
+        """
+        Perform a complete reset of the RP2040 coprocessor.
+        This will restart all systems and reset all registers to default values.
+        """
+        try:
+            print("Initiating system reset...")
+            self._write_byte(self.REG_SYSTEM_RESET, 0xA5)
+            time.sleep(1)  # Give time for the reset to complete
+            print("System reset complete. Re-initializing connection...")
+            # Re-initialize I2C bus after reset
+            self.bus = smbus.SMBus(1)
+            return True
+        except Exception as e:
+            print(f"Error during system reset: {e}")
+            return False
+        
     ####################################
 
 
@@ -128,7 +178,8 @@ class RobotController:
 
 
     ##-----Motor Encoder Section------##
-    def get_encoder(self, motor):
+    
+    def get_encoder(self, motor, debug=False):
         """Get encoder count for a specific motor"""
         encoder_registers = {
             'RF': (self.REG_ENCODER_RF_LOW, self.REG_ENCODER_RF_HIGH),
@@ -142,10 +193,82 @@ class RobotController:
             low = self._read_byte(reg_low)
             high = self._read_byte(reg_high)
             value = (high << 8) | low
+            if debug == True or self.debug ==True:
+                print("##################\n DEBUG STATEMENT FOR get_encoder() \n##################")
+                print(f"Encoder value for {motor}: {value}")
+                print(f"Encoder low: {low}")
+                print (f"Encoder high: {high}")
+                print(f"Encoder reg_low: {reg_low}")
+                print(f"Encoder reg_high: {reg_high}")
+                print("##################\n DEBUG STATEMENT FOR get_encoder() \n##################")
             return value if value < 32768 else value - 65536
         except Exception as e:
             print(f"Error reading encoder: {e}")
             return 0
+    
+    def get_rpm(self,motor, debug=False):
+        
+        if self.rpm_init is False:
+            self._previous_data = {
+                'RF': {'ticks':self.get_encoder('RF'), 'time':time.time()},
+                'RB': {'ticks':self.get_encoder('RB'), 'time':time.time()},
+                'LF': {'ticks':self.get_encoder('LF'), 'time':time.time()},
+                'LB': {'ticks':self.get_encoder('LB'), 'time':time.time()}
+            }
+            self.rpm_init = True
+
+        try: 
+            current_ticks = self.get_encoder(motor) 
+            current_time = time.time() 
+
+            prev_ticks = self._previous_data[motor]['ticks']
+            prev_time = self._previous_data[motor]['time'] 
+
+
+            delta_time = current_time - prev_time 
+            delta_ticks = current_ticks - prev_ticks
+
+            if debug ==True or self.debug == True:
+                print("##############################")
+                print("DEBUG STATEMENT FOR get_rpm()")
+                print("##############################")
+                print(f"Encoder value for {motor}: {current_ticks}")
+                print(f"Previous encoder value for {motor}: {prev_ticks}")
+                print(f"Delta ticks: {delta_ticks}") 
+                print(f"Delta time: {delta_time}")
+                # print(f"Previous data: {self._previous_data}")
+                for key, value in self._previous_data.items():
+                    motor_data = value
+                    print(f"  {key}: Ticks = {motor_data['ticks']}, Time = {motor_data['time']:.6f}")
+                print("#############################")
+                
+
+            if delta_time == 0: 
+                if self.debug == True:
+                    print(f"Warning: Delta time is zero for {motor}")
+                return 0 
+            if delta_ticks == 0 :
+                if self.debug == True: 
+                    print(f"Warning: Delta ticks is zero for {motor}")
+                return 0
+            
+            else: 
+                self._previous_data = {
+                'RF': {'ticks':self.get_encoder('RF'), 'time':time.time()},
+                'RB': {'ticks':self.get_encoder('RB'), 'time':time.time()},
+                'LF': {'ticks':self.get_encoder('LF'), 'time':time.time()},
+                'LB': {'ticks':self.get_encoder('LB'), 'time':time.time()}
+            }
+                rpm = (delta_ticks / self.TICKS_PER_REV) / delta_time * 60 
+                if motor == 'RF' or motor == 'RB':
+                    return rpm  
+                if motor =='LF' or motor == 'LB':
+                    return -rpm
+        
+            
+        except Exception as e :
+            print(f"Error calculating RPM for {motor}: {e}")
+            return None
 
     def get_distance(self, motor):
         """Calculate calibrated distance traveled by a specific motor in meters"""
@@ -155,7 +278,6 @@ class RobotController:
             # Check for unreasonable encoder values
             if abs(ticks) > 10000:  # Limit for reasonable encoder values
                 print(f"Warning: Unusual encoder value for {motor}: {ticks}")
-                return 0
                 
             revolutions = ticks / self.TICKS_PER_REV
             distance = revolutions * self.WHEEL_CIRCUMFERENCE * self.calibration_factor
@@ -164,7 +286,7 @@ class RobotController:
             print(f"Error calculating distance for {motor}: {e}")
             return 0
         
-    def move_distance(self, distance, speed=50):
+    def move_distance(self, distance, speed=0):
         """Move the robot a specific distance in meters with error checking"""
         print(f"\nMoving {distance:.2f} meters at speed {speed}")
         
@@ -360,6 +482,8 @@ class RobotController:
                 self.buzzer_pwm.ChangeDutyCycle(50)
                 time.sleep(duration)
                 self.buzzer_pwm.ChangeDutyCycle(0)
+                time.sleep(0.1)
+                GPIO.cleanup(12)  # Cleanup buzzer GPIO
             else:
                 time.sleep(duration)
                 

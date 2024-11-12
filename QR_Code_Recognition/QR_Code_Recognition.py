@@ -2,13 +2,13 @@ import cv2
 from picamera2 import Picamera2 
 from libcamera import controls
 import time 
-from PCA9685_MC import Motor_Controller
+from RPi_Robot_Hat_Lib import RobotController
 
-Motor = Motor_Controller()
-vertical = 0
+Motor = RobotController()
+vertical = 2
 horizontal = 1
-Motor.servoPulse(horizontal, 1250)
-Motor.servoPulse(vertical, 1050)
+Motor.servoPulse(horizontal, 80)
+Motor.servoPulse(vertical, 90)
 
 frame_width = 640 
 frame_height = 480 

@@ -5,14 +5,14 @@ import time
 
 
         
-# enc = Encoder(debug=True)
+
 ultrasonic = Ultrasonic()
 Motor = RobotController()
 Speed = 40
 rotation_speed = 30
 threshold = 20
 min_thresh_dist = 10 
-isInit = True 
+
 
 
 def obstacle_Avoid(left, front, right):

@@ -7,16 +7,15 @@ import time
 from libcamera import controls
 
 
- # enc = Encoder(ODISPLAY=True)
 ultrasonic = Ultrasonic()
 Motor = RobotController()
-vertical = 1
-horizontal = 2
+vertical = 2
+horizontal = 1
 Motor.set_servo(vertical, 80)
 Motor.set_servo(horizontal, 90)
 
-Speed = 20
-rotation_speed = 50
+Speed = 30
+rotation_speed = 20
 threshold = 30 
 min_thresh_dist = 10 
 picam2 = Picamera2() 
@@ -26,7 +25,6 @@ picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 frame_lock = threading.Lock()
 capture_thread = threading.Thread(target=capture_frame)  # Start the capture frame thread
 shutdown_event = threading.Event()
-isInit = True 
 
 
 # Capture and Display Frame 
@@ -129,12 +127,10 @@ try:
 except KeyboardInterrupt:
     shutdown_event.set()
     Motor.cleanup()
-    # enc.stop()
     print("Program Terminated")
 
 finally: 
     shutdown_event.set()
-    # enc.stop()
     capture_thread.join()
     cv2.destroyAllWindows()
     exit()
