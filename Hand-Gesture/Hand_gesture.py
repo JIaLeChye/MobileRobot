@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 from picamera2 import Picamera2
+from libcamera import controls
 from RPi_Robot_Hat_Lib import RobotController
 
   
@@ -21,7 +22,7 @@ def init():
         cap = Picamera2(0)
         cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         cap.start()
-
+        cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         vertical = 2
         horizontal = 1
         Motor.set_servo(vertical, 180)
