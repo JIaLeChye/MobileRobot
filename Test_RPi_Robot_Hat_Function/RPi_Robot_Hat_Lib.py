@@ -53,6 +53,11 @@ class RobotController:
         self.REG_VOLTAGE = 17
         self.REG_ENCODER_RESET = 18
         self.REG_SYSTEM_RESET = 19
+        self.lib_ver= "1.0.0"
+
+    def __version__(self):
+        print(f"RPi_Robot_Hat_Lib Version: {self.lib_ver}")
+
 
     ##-- Communication section----##
     def _read_byte(self, reg):
