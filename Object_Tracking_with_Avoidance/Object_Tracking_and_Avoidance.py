@@ -27,8 +27,6 @@ latest_frame = None
 Tracking_mode = False 
 Avoidance_mode = False 
 
-print("Global Variable Set ")
-
 
 # Set initial servo position
 vertical = 2
@@ -96,17 +94,11 @@ def colorPicker():
             
 def avoidance_mode():
     global Avoidance_mode,object_detected 
-    # print("Avoidance Mode: ", Avoidance_mode)
-    # print("shutdown_event: ", shutdown_event.is_set())
-    # print("Avoidance_event: ", Avoidance_event.is_set())
+
     while not shutdown_event.is_set(): 
-        # print("Avoidance Mode: ", Avoidance_mode)
-        # print("shutdown_event: ", shutdown_event.is_set())
-        # print("Avoidance_event: ", Avoidance_event.is_set())
+
         while Avoidance_event.is_set() and not shutdown_event.is_set():
-            # with Frame_lock:
-            #     if latest_frame is not None:
-            #         img = latest_frame.copy()
+
             print("No object detected, switching to obstacle avoidance.")
             Speed = 40
             rotation_speed = 30
@@ -226,10 +218,6 @@ def main():
                     Avoidance_mode = True
                     Avoidance_event.set()
                     print("Switching to Avoidance mode")
-                # Avoidance_event.set()
-                # print("Avoidance Mode: ", Avoidance_mode)
-                # print("shutdown_event: ", shutdown_event.is_set())
-                # print("Avoidance_event: ", Avoidance_event.is_set())
                 cv2.putText(img, "Obstacle Avoidance Mode", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 0, 0), 2)
                 cv2.imshow("Obstacle Avoidance", img)
         else:
@@ -252,6 +240,7 @@ def main():
             print("Program Terminated \n Exiting....")
             shutdown_event.set()
             
+            
 
 
 try:
@@ -270,7 +259,6 @@ finally:
     Avoidance_event.clear()
     camera_thread.join()
     cv2.destroyAllWindows()
-    Motor.Brake
     Motor.cleanup()
     picam.stop()
     print("Program Terminated \n Exiting....")
