@@ -1,26 +1,16 @@
 import smbus
 import time
-import board 
-import busio 
-import adafruit_ssd1306 
-from PIL import Image, ImageDraw, ImageFont
 import math
 import RPi.GPIO as GPIO
 
 class RobotController:
     
-    def __init__(self, wheel_diameter=97, OLED_addr=0x3c, debug=False,):  # diameter in mm
+    def __init__(self, wheel_diameter=97, debug=False,):  # diameter in mm
         # Setup I2C communication
         self.address = 0x09
         self.bus = smbus.SMBus(1)
 
-        self.OLED_addr = OLED_addr 
-        self.i2c = busio.I2C(board.SCL, board.SDA) 
-        self.disp = adafruit_ssd1306.SSD1306_I2C(128, 64, self.i2c, addr=self.OLED_addr)
-        self.disp.fill(0) 
-        self.image = Image.new("1", (self.disp.width, self.disp.height)) 
-        self.draw = ImageDraw.Draw(self.image)
-        self.font = ImageFont.load_default()
+    
 
         self.debug = debug 
         self.rpm_init = False 
@@ -258,21 +248,24 @@ class RobotController:
                 if motor == 'RF' or motor == 'RB':
                     return rpm  
                 if motor =='LF' or motor == 'LB':
-                    return -rpm
+                    return -rpm 
         
             
         except Exception as e :
             print(f"Error calculating RPM for {motor}: {e}")
             return None
-
-    def get_distance(self, motor):
+        
+       
+        
+    def get_distance(self, motor,debug=False):
         """Calculate calibrated distance traveled by a specific motor in meters"""
         try:
             ticks = self.get_encoder(motor)
             
             # Check for unreasonable encoder values
             if abs(ticks) > 10000:  # Limit for reasonable encoder values
-                print(f"Warning: Unusual encoder value for {motor}: {ticks}")
+                if debug == True or self.debug==True: 
+                    print(f"Warning: Unusual encoder value for {motor}: {ticks}")
                 
             revolutions = ticks / self.TICKS_PER_REV
             distance = revolutions * self.WHEEL_CIRCUMFERENCE * self.calibration_factor
