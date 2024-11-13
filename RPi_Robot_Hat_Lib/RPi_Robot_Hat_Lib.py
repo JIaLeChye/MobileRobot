@@ -6,6 +6,7 @@ import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
 import math
 import RPi.GPIO as GPIO
+from PIL import ImageDraw
 
 class RobotController:
     
@@ -270,14 +271,15 @@ class RobotController:
             print(f"Error calculating RPM for {motor}: {e}")
             return None
 
-    def get_distance(self, motor):
+    def get_distance(self, motor, debug=False):
         """Calculate calibrated distance traveled by a specific motor in meters"""
         try:
             ticks = self.get_encoder(motor)
             
             # Check for unreasonable encoder values
             if abs(ticks) > 10000:  # Limit for reasonable encoder values
-                print(f"Warning: Unusual encoder value for {motor}: {ticks}")
+                if debug == True or self.debug == True:
+                    print(f"Warning: Unusual encoder value for {motor}: {ticks}")
                 
             revolutions = ticks / self.TICKS_PER_REV
             distance = revolutions * self.WHEEL_CIRCUMFERENCE * self.calibration_factor
@@ -510,6 +512,70 @@ class RobotController:
             self.buzzer_pwm.stop()
             GPIO.cleanup(12)  # Cleanup buzzer GPIO
 
+class Encoder(RobotController): 
+    def disp_fwd_enc(self):
+        """Read the Forward encoder data (Left and Right) and display it on the OLED Screen"""
+        self.disp.fill(0)
+        self.disp.show()
+
+        LF_distance =  abs(self.get_distance('LF')) 
+        RF_distance = abs(self.get_distance('RF') )
+
+        LF_RPM = abs(self.get_rpm('LF'))
+        RF_RPM = abs(self.get_rpm('RF'))
+
+        image = Image.new("1",(self.disp.width, self.disp.height))
+        draw = ImageDraw.Draw(image)
+
+        # Display motor 1 data at the top of the screen
+        draw.text((0, 0), f"Motor: LF", font=self.font, fill=255)
+        draw.text((0, 10), f"Dist: {LF_distance:.2f} cm", font=self.font, fill=255)
+        draw.text((0, 20), f"RPM: {LF_RPM:.2f}", font=self.font, fill=255)
+
+        draw.line((0, 33, 128, 33), width=2, fill=255)  # Draw a horizontal line
+
+        # Display motor 2 data at the bottom of the screen
+        draw.text((0, 35), f"Motor: RF", font=self.font, fill=255)
+        draw.text((0, 45), f"Dist: {RF_distance:.2f} cm", font=self.font, fill=255)
+        draw.text((0, 55), f"RPM: {RF_RPM:.2f}", font=self.font, fill=255)
+
+        self.disp.image(image) 
+        self.disp.show()
+
+    
+    def disp_bwd_enc(self):
+        """Read the Forward encoder data (Left and Right) and display it on the OLED Screen"""
+        self.disp.fill(0)
+        self.disp.show()
+
+        LB_distance =  abs(self.get_distance('LB')) 
+        RB_distance = abs(self.get_distance('RB') )
+
+        LB_RPM = abs(self.get_rpm('LB'))
+        RB_RPM = abs(self.get_rpm('RB'))
+
+        image = Image.new("1",(self.disp.width, self.disp.height))
+        draw = ImageDraw.Draw(image)
+
+        # Display motor 1 data at the top of the screen
+        draw.text((0, 0), f"Motor: LB", font=self.font, fill=255)
+        draw.text((0, 10), f"Dist: {LB_distance:.2f} cm", font=self.font, fill=255)
+        draw.text((0, 20), f"RPM: {LB_RPM:.2f}", font=self.font, fill=255)
+
+        draw.line((0, 33, 128, 33), width=2, fill=255)  # Draw a horizontal line
+
+        # Display motor 2 data at the bottom of the screen
+        draw.text((0, 35), f"Motor: RB", font=self.font, fill=255)
+        draw.text((0, 45), f"Dist: {RB_distance:.2f} cm", font=self.font, fill=255)
+        draw.text((0, 55), f"RPM: {RB_RPM:.2f}", font=self.font, fill=255)
+
+        self.disp.image(image) 
+        self.disp.show()
+
+
+    def clear_disp(self):
+        self.disp.fill(0)
+        self.disp.show()
 
 
 def test():
@@ -540,6 +606,10 @@ def test():
         analog = robot.read_line_analog()
         print(f"Digital sensors: {bin(digital)[2:]:>05}")
         print(f"Analog value: {analog}")
+
+        # Test buzzer
+        print("\nPlaying a tone...")
+        robot.play_tone(440, 1)  # Play A4 for 1 second
         
     except KeyboardInterrupt:
         print("\nTest interrupted by user")
