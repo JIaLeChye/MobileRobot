@@ -7,13 +7,13 @@ AUTH = "thhcE_N3Hi7WQTq-K2jHJQC-5x1ng-jZ"
 
 
 	
-Robot = RobotController()
+Motor = RobotController()
 print("Robot Controller Connection Established")
 blynk = BlynkLib.Blynk(AUTH) 
 print("Blynk Connection Established")
 Freq = 0
 blynk.virtual_write(4,0)
-Robot.Brake() 
+Motor.Brake() 
 print("Robot Stopped") 
 		 
 
@@ -36,9 +36,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Forward(Freq)
+				Motor.Forward(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	
@@ -48,9 +48,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Backward(Freq)
+				Motor.Backward(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V2")
@@ -59,9 +59,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Horizontal_Left(Freq)
+				Motor.Horizontal_Left(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V3")
@@ -70,9 +70,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.Horizontal_Right(Freq)
+				Motor.Horizontal_Right(Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V5")
@@ -81,9 +81,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=0, turn=Freq)
+				Motor.move(speed=0, turn=Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	@blynk.on("V6")
@@ -92,9 +92,9 @@ def blynk_connected():
 		VPin = int(value[0])
 		if VPin is not None:
 			if VPin == 1 :
-				Robot.move(speed=0, turn=-Freq)
+				Motor.move(speed=0, turn=-Freq)
 			if VPin == 0 :
-				Robot.Brake()
+				Motor.Brake()
 		else:
 			pass
 	blynk.sync_virtual(0,1,2,3,4)
@@ -107,7 +107,7 @@ def blynk_connected():
 		status = blynk.state
 		if status == 0:
 			print("Reconnecting...")
-			Robot.Brake()
+			Motor.Brake()
 			time.sleep(2)
 			blynk.connect()
 			
@@ -126,9 +126,8 @@ except KeyboardInterrupt:
   Freq = 0 
   blynk.virtual_write(4, Freq)
   blynk.virtual_write(8, Freq)
-  Robot.Brake()
-#   enc.stop()
-  sys.exit(0)
+  Motor.cleanup()
+  exit()
 
 	
 

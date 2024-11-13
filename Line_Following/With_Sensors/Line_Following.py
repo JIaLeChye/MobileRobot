@@ -1,27 +1,14 @@
 from RPi_Robot_Hat_Lib import RobotController 
 import time 
-import RPi.GPIO as GPIO 
+
 
 
 Motor = RobotController() 
-GPIO.setmode(GPIO.BCM)
-D1 = 6 
-D2 = 11
-D3 = 13
-D4 = 17 
-D5 = 19 
-GPIO.setup(D1, GPIO.IN)
-GPIO.setup(D2, GPIO.IN)
-GPIO.setup(D3, GPIO.IN)
-GPIO.setup(D4, GPIO.IN)
-GPIO.setup(D5, GPIO.IN)
-print("GPIO Setup Complete")
 
 
 
 def main():
     while True: 
-        # enc.encoder()
         Line_Sensor = Motor.read_line_sensors()
         outerRight = Line_Sensor[0]
         Right = Line_Sensor[1]
@@ -55,5 +42,4 @@ try:
 
 except KeyboardInterrupt: 
     Motor.cleanup()
-    # enc.stop()
     print("Program Stopped")

@@ -41,8 +41,6 @@ def colorPicker():
         u_v = cv2.getTrackbarPos("Upper Value", "Color_Picker")
         lower_bound = np.array([l_h, l_s, l_v])
         upper_bound = np.array([u_h, u_s, u_v])
-
-
         mask = cv2.inRange(hsv, lower_bound, upper_bound) 
         res = cv2.bitwise_and(img, img, mask=mask)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGRA)
@@ -111,6 +109,5 @@ except KeyboardInterrupt:
 finally:
     picam.stop()
     Motor.cleanup()
-    # enc.stop()
     cv2.destroyAllWindows()
     print("Program Terminated \n Exiting....")

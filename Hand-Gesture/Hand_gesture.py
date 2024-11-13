@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 from picamera2 import Picamera2
+from libcamera import controls
 from RPi_Robot_Hat_Lib import RobotController
 
   
@@ -21,12 +22,11 @@ def init():
         cap = Picamera2(0)
         cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
         cap.start()
-
-
-        vertical = 0
+        cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+        vertical = 2
         horizontal = 1
-        Motor.set_servo(horizontal, 180)
-        Motor.set_servo(vertical, 90)
+        Motor.set_servo(vertical, 180)
+        Motor.set_servo(horizontal, 90)
 
    
     
@@ -118,7 +118,7 @@ try:
                 main()
 except KeyboardInterrupt:
         cv2.destroyAllWindows()
-        Motor.Brake()
+        Motor.cleanup()
         # enc.stop()
 
 

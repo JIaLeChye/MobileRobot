@@ -47,8 +47,8 @@ Motor = RobotController()
 
 ##  Control the Pna Tilt HAT using the motor controller
 # Set PanTilt and servo channels
-vertical = 1
-horizontal = 2
+vertical = 2
+horizontal = 1
 Motor.set_servo(vertical, 80)
 Motor.set_servo(horizontal, 90)
 

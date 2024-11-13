@@ -24,7 +24,6 @@ def init():
     vertical = 1
     horizontal = 2
     Motor.set_servo(vertical, 180)
-    time.sleep(0.1)
     Motor.set_servo(horizontal, 90)
 
     # Set preview configuration (modify resolution as needed)
@@ -59,12 +58,8 @@ def main():
         Black_lower = np.array([56,22,27], dtype = "uint8")
         Black_upper = np.array([179, 255, 255], dtype = "uint8")
         Blacklines = cv2.inRange(frame, Black_lower, Black_upper)
-               
-#         kernel = np.ones((5,5), np.uint8)
-#         Blacklines = cv2.morphologyEx(Blacklines, cv2.MORPH_CLOSE, kernel)
-#         Blacklines = cv2.morphologyEx(Blacklines, cv2.MORPH_OPEN, kernel)
-                                    
-                
+            
+                                  
         canny_edges = cv2.Canny(Blacklines, 50, 150)
         
         contours, _  = cv2.findContours(Blacklines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -113,9 +108,6 @@ def main():
             break 
 
         
-        
-# The `try` block in the code snippet is used to handle exceptions that may occur during the execution
-# of the `main()` function.
 try:
     if __name__ == '__main__': 
         main()

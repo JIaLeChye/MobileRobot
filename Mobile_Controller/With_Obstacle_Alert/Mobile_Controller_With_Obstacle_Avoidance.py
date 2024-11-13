@@ -16,11 +16,7 @@ obstacleSens = Ultrasonic(debug=False)
 ReverseSens = IRsens()
 print("Initialising Obstacle Detection")
 
-
-
-
-
-Freq = 0-0
+Freq = 0
 blynk.virtual_write(4,Freq)
 
 @blynk.on("connected")
@@ -159,8 +155,8 @@ except KeyboardInterrupt:
   Freq = 0 
   blynk.virtual_write(4, Freq)
   blynk.virtual_write(8, Freq)
-  Motor.Brake()
   Motor.cleanup()
+  obstacleSens.cleanup()
 
 
 
