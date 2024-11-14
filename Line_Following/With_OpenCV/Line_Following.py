@@ -23,8 +23,8 @@ def init():
     # Set PanTilt and servo HAT
     vertical = 1
     horizontal = 2
-    Motor.set_servo(vertical, 180)
-    Motor.set_servo(horizontal, 90)
+    Motor.set_servo(vertical, 90)
+    Motor.set_servo(horizontal,180 )
 
     # Set preview configuration (modify resolution as needed)
     picam2 = Picamera2()
@@ -55,12 +55,12 @@ def main():
         
         
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        Black_lower = np.array([56,22,27], dtype = "uint8")
-        Black_upper = np.array([179, 255, 255], dtype = "uint8")
+        Black_lower = np.array([0,0,0], dtype = "uint8")
+        Black_upper = np.array([179, 255, 118], dtype = "uint8")
         Blacklines = cv2.inRange(frame, Black_lower, Black_upper)
             
                                   
-        canny_edges = cv2.Canny(Blacklines, 50, 150)
+        # canny_edges = cv2.Canny(Blacklines, 50, 150)
         
         contours, _  = cv2.findContours(Blacklines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if len(contours) > 0 :
@@ -82,14 +82,14 @@ def main():
             
             if cx >= 350:
                 print("Going Left")
-                Motor.move(speed=0, turn=-15)
+                Motor.move(speed=0, turn=30)
             
             if cx < 350 and cx > 300:
                 print("On track")
-                Motor.Forward(20)
+                Motor.Forward(40)
             if cx < 300:
                 print("Going Right")
-                Motor.move(speed =0 , turn=15)
+                Motor.move(speed =0 , turn=-30)
 
       
             
@@ -100,7 +100,7 @@ def main():
 
 
         cv2.imshow("Black Lines", Blacklines)
-        cv2.imshow("Edge Detection", canny_edges)
+        # cv2.imshow("Edge Detection", canny_edges)
         cv2.imshow("Main", frame) 
     
         key = cv2.waitKey(1) & 0xFF
@@ -115,4 +115,10 @@ try:
 except KeyboardInterrupt:
     Motor.Brake()
     Motor.cleanup()
-    
+
+finally:
+    Motor.Brake()
+    Motor.cleanup()
+    cv2.destroyAllWindows()
+    picam2.stop()
+    exit()
