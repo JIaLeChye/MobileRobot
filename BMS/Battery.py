@@ -75,6 +75,7 @@ def Display_battery(battery_stat):
     time.sleep(1)
 
 def main():
+    global font
     logger.debug("Script Started")
     robot.play_tone(1000, 0.5)
     time.sleep(0.2)
@@ -88,17 +89,19 @@ def main():
                 logger.warning(f"Battery Low Voltage detected: {battery_stat}")
                 draw.text((0, 30), "LOW BATTERY!", font=font, fill=255)
                 draw.text((0, 40), "ROBOT WILL SHUTDOWN", font=font, fill=255)
-                disp.text((0, 50), "AT 10.5V", font=font, fill=255)
+                draw.text((0, 50), "AT 10.5V", font=font, fill=255)
                 disp.image(image)
                 disp.show()
+                time.sleep(1)
                 for i in range(5):
-                    robot.play_tone(1000, 0.5)
+                    robot.play_tone(2000, 1)
                     disp.fill(0)
                     disp.show()
                     time.sleep(0.2)
                     draw.text((0, 30), "LOW BATTERY!", font=font, fill=255)
+                    disp.image(image)
                     disp.show()
-                    time.sleep(1)
+                    # time.sleep(1)
                 robot.cleanup_buzzer()
                 time.sleep(CHECK_INTERVAL)
                 if USB_VOLTAGE < battery_stat <= 10.5: 
@@ -108,11 +111,14 @@ def main():
                         disp.show()
                         draw.text((0, 30), "PLS RECHAGRE!", font=font, fill=255)
                         draw.text((0,40), f"VOLTAGE: {battery_stat}", font=font, fill=255)
+                        disp.image(image)
                         disp.show()
                         time.sleep(10)
-                        os.system("sudo shutdown -h now")
+                    os.system("sudo shutdown -h now")
             elif battery_stat <= USB_VOLTAGE:
                 logger.warning(f"USB Voltage detected: {battery_stat}")
+                draw.text((0, 10), "USB Voltage detected", font=font, fill=255)
+                draw.text((0, 20), f"VOLTAGE: {battery_stat}", font=font, fill=255)
                 draw.text((0, 30), "CAUTION!", font=font, fill=255)
                 draw.text((0, 40), "DO NOT START ", font=font, fill=255)
                 draw.text((0, 50), "MOTOR!", font=font, fill=255)
