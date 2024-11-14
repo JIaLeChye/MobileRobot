@@ -485,9 +485,10 @@ class RobotController:
                 time.sleep(duration)
                 self.buzzer_pwm.ChangeDutyCycle(0)
                 time.sleep(0.1)
-                GPIO.cleanup(12)  # Cleanup buzzer GPIO
+                # GPIO.cleanup(12)  # Cleanup buzzer GPIO
             else:
                 time.sleep(duration)
+            
                 
         except Exception as e:
             print(f"Error playing tone: {e}")
@@ -512,7 +513,6 @@ class RobotController:
             self.buzzer_pwm.stop()
             GPIO.cleanup(12)  # Cleanup buzzer GPIO
 
-class Encoder(RobotController): 
     def disp_fwd_enc(self):
         """Read the Forward encoder data (Left and Right) and display it on the OLED Screen"""
         self.disp.fill(0)
@@ -520,7 +520,6 @@ class Encoder(RobotController):
 
         LF_distance =  abs(self.get_distance('LF')) 
         RF_distance = abs(self.get_distance('RF') )
-
         LF_RPM = abs(self.get_rpm('LF'))
         RF_RPM = abs(self.get_rpm('RF'))
 
@@ -609,7 +608,7 @@ def test():
 
         # Test buzzer
         print("\nPlaying a tone...")
-        robot.play_tone(440, 1)  # Play A4 for 1 second
+        robot.play_tone(1000, 1) 
         
     except KeyboardInterrupt:
         print("\nTest interrupted by user")
