@@ -60,7 +60,7 @@ def main():
         Blacklines = cv2.inRange(frame, Black_lower, Black_upper)
             
                                   
-        # canny_edges = cv2.Canny(Blacklines, 50, 150)
+        canny_edges = cv2.Canny(Blacklines, 50, 150)
         
         contours, _  = cv2.findContours(Blacklines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if len(contours) > 0 :
@@ -100,7 +100,7 @@ def main():
 
 
         cv2.imshow("Black Lines", Blacklines)
-        # cv2.imshow("Edge Detection", canny_edges)
+        cv2.imshow("Edge Detection", canny_edges)
         cv2.imshow("Main", frame) 
     
         key = cv2.waitKey(1) & 0xFF
