@@ -88,7 +88,8 @@ def Display_battery(battery_stat):
 
 def main():
     global font
-    logger.debug("\n\nScript Started")
+    logger.debug("\n\n")
+    logger.debug("Script Started")
     logger.debug("/------------/")
 
     robot.play_tone(1000, 0.5)
