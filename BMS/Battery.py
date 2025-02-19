@@ -89,8 +89,9 @@ def Display_battery(battery_stat):
 def main():
     global font
     logger.debug("\n\n")
-    logger.debug("Script Started")
-    logger.debug("/------------/")
+    logger.debug("/--------------------------/")
+    logger.debug("-------Script Started-------")
+    logger.debug("/--------------------------/")
 
     robot.play_tone(1000, 0.5)
     time.sleep(0.2)
@@ -107,7 +108,7 @@ def main():
                 draw.text((0, 50), "AT 10.5V", font=font, fill=255)
                 disp.image(image)
                 disp.show()
-                time.sleep(1)
+                time.sleep(5)
                 for i in range(5):
                     robot.play_tone(2000, 1)
                     disp.fill(0)
