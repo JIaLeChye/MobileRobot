@@ -16,7 +16,18 @@ logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
 
 # Create a rotating file handler to manage log size and keep old logs
+# Check is the log file exist, if not create new log file 
+
 log_file = "/home/raspberry/battery/battery_log.txt"
+if not os.path.exists(log_file):
+           # Create the directory if it doesn't exist
+           os.makedirs(os.path.dirname(log_file), exist_ok=True)
+           
+           # Create empty log file
+           with open(log_file, 'w') as f:
+               pass  # Creates empty file
+           print(f"Created new log file at: {log_file}")
+        
 log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 5 backups
 log_handler.setLevel(logging.DEBUG)
 log_handler.setFormatter(formatter)
