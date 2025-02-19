@@ -22,11 +22,12 @@ log_file = "/home/raspberry/battery/battery_log.txt"
 if not os.path.exists(log_file):
            # Create the directory if it doesn't exist
            os.makedirs(os.path.dirname(log_file), exist_ok=True)
-           
            # Create empty log file
            with open(log_file, 'w') as f:
                pass  # Creates empty file
            print(f"Created new log file at: {log_file}")
+else: 
+    print("Log File location" + log_file)
         
 log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 5 backups
 log_handler.setLevel(logging.DEBUG)
