@@ -51,7 +51,7 @@ logger.addHandler(stdout_handler)
 robot = RobotController()
 LOW_BATTERY_TRESH = 11
 USB_VOLTAGE = 5
-CHECK_INTERVAL = 60
+CHECK_INTERVAL = 2
 
 i2c = busio.I2C(board.SCL, board.SDA)
 disp = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c)
@@ -138,6 +138,7 @@ def main():
                 disp.show()
             else:
                 Display_battery(battery_stat)
+                # time.sleep(1)
         except Exception as e:
             logger.error(f"Failed to read battery or update display: {e}")
         
