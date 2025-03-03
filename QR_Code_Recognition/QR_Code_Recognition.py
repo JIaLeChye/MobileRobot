@@ -7,8 +7,8 @@ from RPi_Robot_Hat_Lib import RobotController
 Motor = RobotController()
 vertical = 2
 horizontal = 1
-Motor.servoPulse(horizontal, 80)
-Motor.servoPulse(vertical, 90)
+Motor.set_servo(horizontal, 80)
+Motor.set_servo(vertical, 90)
 
 frame_width = 640 
 frame_height = 480 

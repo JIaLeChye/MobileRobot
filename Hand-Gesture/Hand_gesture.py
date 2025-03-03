@@ -25,7 +25,7 @@ def init():
         cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         vertical = 2
         horizontal = 1
-        Motor.set_servo(vertical, 180)
+        Motor.set_servo(vertical, 60)
         Motor.set_servo(horizontal, 90)
 
    
