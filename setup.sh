@@ -1,6 +1,8 @@
 echo "Installing required libraries and dependencies"  
 pip install -r requirements.txt 
-
+cd RPi_Robot_Hat_Lib
+sudo pip install .
+cd 
 echo "Replacing RPi.GPIO" to "rpi-lgpio" 
 pip uninstall -y RPi.GPIO rpi-gpio rpi-lgpio
 sudo apt remove python3-rpi.gpio
