@@ -6,7 +6,7 @@ import time
 class IRsens:
     __init_check = False 
 
-    def __init__(self, IrPin = 22, debug=False): 
+    def __init__(self, IrPin = 24, debug=False): 
 
         if not IRsens.__init_check: 
             self.Irsensor = IrPin
