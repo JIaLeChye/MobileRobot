@@ -5,6 +5,7 @@ import sys
 import logging, logging.handlers
 import busio 
 import board
+import signal 
 import adafruit_ssd1306 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -18,7 +19,10 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(me
 # Create a rotating file handler to manage log size and keep old logs
 # Check is the log file exist, if not create new log file 
 
-log_file = "/home/raspberry/battery/battery_log.txt"
+User_Directory = os.path.expanduser("~")
+log_dir = os.path.join(User_Directory, "battery")
+log_file = os.path.join(log_dir, "battery_log.txt")
+
 if not os.path.exists(log_file):
            # Create the directory if it doesn't exist
            os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -47,6 +51,8 @@ stdout_handler.setFormatter(formatter)
 logger.addHandler(log_handler)
 logger.addHandler(stderr_handler)
 logger.addHandler(stdout_handler)
+
+
 
 robot = RobotController()
 LOW_BATTERY_TRESH = 11
@@ -85,6 +91,12 @@ def Display_battery(battery_stat):
     else:
         logger.error("OLED display not initialized.")   
     time.sleep(1)
+
+
+def handle_sigterm(signum, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_sigterm) 
 
 def main():
     global font
@@ -154,6 +166,8 @@ try:
 
 except KeyboardInterrupt:
     robot.cleanup()  
+    disp.fill(0)
+    disp.show() 
     logger.warning("Program Exit: User Interupt")
 except Exception as e:
     logger.error(f"An error occurred: {e}") 

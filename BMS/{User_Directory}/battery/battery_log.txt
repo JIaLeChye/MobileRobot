@@ -1,0 +1,9 @@
+2025-03-10 13:47:04,834 - DEBUG - main - 
+
+
+2025-03-10 13:47:04,834 - DEBUG - main - /--------------------------/
+2025-03-10 13:47:04,834 - DEBUG - main - -------Script Started-------
+2025-03-10 13:47:04,834 - DEBUG - main - /--------------------------/
+2025-03-10 13:47:06,036 - INFO - Display_battery - 2025-03-10 13:47:06 --> Battery Voltage: 12.4V
+2025-03-10 13:47:10,966 - WARNING - <module> - Program Exit: User Interupt
+2025-03-10 13:47:11,060 - INFO - <module> - Script Ended
