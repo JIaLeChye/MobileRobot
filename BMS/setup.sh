@@ -26,6 +26,14 @@ if [ ! -f "battery.service" ]; then
     exit 1
 fi
 
+if [ -f "$SERVICE_PATH" ]; then 
+    echo "Old Battery.service file found" 
+    echo "deleting old battery.service file"
+    sudo rm $SERVICE_PATH || {
+        echo "Error old service file found but unable to remove $SERVICE_PATH" 
+        exit 1
+    }
+fi 
 # Copy the service file to /etc/systemd/system/
 echo "Copying battery.service to $SERVICE_PATH..."
 sudo cp battery.service "$SERVICE_PATH" || {
