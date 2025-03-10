@@ -3,7 +3,7 @@ Description=Battery Monitoring Script
 
 [Service]
 User=raspberry
-WorkingDirectory=/path/to
+WorkingDirectory=/path/to/Battery.py
 ExecStart=/usr/bin/python /path/to/Battery.py
 StandardOutput=file:/home/raspberry/battery/battery_log.txt
 StandardError=file:/home/raspberry/battery/battery_error_log.txt

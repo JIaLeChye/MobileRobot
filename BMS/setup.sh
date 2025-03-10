@@ -1,10 +1,13 @@
 #!/bin/bash
 
 # Variables
+USER_NAME=$(whoami)
 USER_HOME="$HOME"
 SERVICE_NAME="battery.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 BATTERY_SCRIPT=$(find "$USER_HOME/Desktop" -name "Battery.py" -print -quit)
+STANDARD_OUTPUT="Battery_log.txt" 
+STANDARD_ERROR_OUTPUT="Battery_error_log.txt" 
 
 echo "User Directory is $USER_HOME"
 
@@ -29,21 +32,40 @@ sudo cp battery.service "$SERVICE_PATH" || {
     exit 1
 }
 
+# Update User name 
+echo "Updating User Name: $USER_NAME" 
+sudo sed -i "s|^User=.*|User=$USER_NAME|" "$SERVICE_PATH" || {
+    echo "Error: Fail to modify Username in $SERVICE_PATH"
+    exit 1
+}
+
 # Update ExecStart and WorkingDirectory in the service file
 echo "Updating service file at $SERVICE_PATH..."
-sudo sed -i "s|ExecStart=.*|ExecStart=/usr/bin/python3 $BATTERY_SCRIPT|" "$SERVICE_PATH" || {
+sudo sed -i "s|^ExecStart=.*|ExecStart=/usr/bin/python3 $BATTERY_SCRIPT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update ExecStart in $SERVICE_PATH."
     exit 1
 }
 
-sudo sed -i "s|WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")|" "$SERVICE_PATH" || {
+sudo sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")|" "$SERVICE_PATH" || {
     echo "Error: Failed to update WorkingDirectory in $SERVICE_PATH."
+    exit 1
+}
+
+# Update log file paths
+echo "Updating log file paths..."
+sudo sed -i "s|^StandardOutput=.*|StandardOutput=file:$SCRIPT_DIR/$STANDARD_OUTPUT|" "$SERVICE_PATH" || {
+    echo "Error: Failed to update StandardOutput in $SERVICE_PATH."
+    exit 1
+}
+
+sudo sed -i "s|^StandardError=.*|StandardError=file:$SCRIPT_DIR/$STANDARD_ERROR_OUTPUT|" "$SERVICE_PATH" || {
+    echo "Error: Failed to update StandardError in $SERVICE_PATH."
     exit 1
 }
 
 # Verify the service file
 echo "Service file updated:"
-ls -l "$SERVICE_PATH"cd
+ls -l "$SERVICE_PATH"
 
 # Reload systemd daemon
 echo "Reloading systemd daemon..."
