@@ -8,6 +8,7 @@ SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 BATTERY_SCRIPT=$(find "$USER_HOME/Desktop" -name "Battery.py" -print -quit)
 STANDARD_OUTPUT="Battery_log.txt" 
 STANDARD_ERROR_OUTPUT="Battery_error_log.txt" 
+LOG_FILE_PATH="$USER_HOME/Battery_Log" 
 
 echo "User Directory is $USER_HOME"
 
@@ -52,15 +53,27 @@ sudo sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT"
 }
 
 # Update log file paths
-SCRIPT_DIR=$(dirname "$BATTERY_SCRIPT")
+
 
 echo "Updating log file paths..."
-sudo sed -i "s|^StandardOutput=.*|StandardOutput=file:$SCRIPT_DIR/$STANDARD_OUTPUT|" "$SERVICE_PATH" || {
+
+
+if [ ! -d "$LOG_FILE_PATH" ]; then
+    echo "Creating log directory: $LOG_FILE_PATH"
+    mkdir -p "$LOG_FILE_PATH" || {
+        echo "Error: Failed to create log directory."
+        exit 1
+    }
+else
+    echo "Log folder exists: $LOG_FILE_PATH"
+fi
+
+sudo sed -i "s|^StandardOutput=.*|StandardOutput=file:$LOG_FILE_PATH/$STANDARD_OUTPUT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update StandardOutput in $SERVICE_PATH."
     exit 1
 }
 
-sudo sed -i "s|^StandardError=.*|StandardError=file:$SCRIPT_DIR/$STANDARD_ERROR_OUTPUT|" "$SERVICE_PATH" || {
+sudo sed -i "s|^StandardError=.*|StandardError=file:$LOG_FILE_PATH/$STANDARD_ERROR_OUTPUT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update StandardError in $SERVICE_PATH."
     exit 1
 }

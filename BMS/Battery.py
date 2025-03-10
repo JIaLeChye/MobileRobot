@@ -19,23 +19,23 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(me
 # Create a rotating file handler to manage log size and keep old logs
 # Check is the log file exist, if not create new log file 
 
-User_Directory = os.path.expanduser("~")
-log_dir = os.path.join(User_Directory, "battery")
-log_file = os.path.join(log_dir, "battery_log.txt")
+# User_Directory = os.path.expanduser("~")
+# log_dir = os.path.join(User_Directory, "Battery_Log")
+# log_file = os.path.join(log_dir, "battery_log_Python.txt")
 
-if not os.path.exists(log_file):
-           # Create the directory if it doesn't exist
-           os.makedirs(os.path.dirname(log_file), exist_ok=True)
-           # Create empty log file
-           with open(log_file, 'w') as f:
-               pass  # Creates empty file
-           print(f"Created new log file at: {log_file}")
-else: 
-    print("Log File location" + log_file)
+# if not os.path.exists(log_file):
+#            # Create the directory if it doesn't exist
+#            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+#            # Create empty log file
+#            with open(log_file, 'w') as f:
+#                pass  # Creates empty file
+#            print(f"Created new log file at: {log_file}")
+# else: 
+#     print("Log File location" + log_file)
         
-log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 5 backups
-log_handler.setLevel(logging.DEBUG)
-log_handler.setFormatter(formatter)
+# log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 5 backups
+# log_handler.setLevel(logging.DEBUG)
+# log_handler.setFormatter(formatter)
 
 # Create a stderr handler for error logs (critical and above)
 stderr_handler = logging.StreamHandler(sys.stderr)
@@ -48,7 +48,7 @@ stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 
 # Add handlers to the logger
-logger.addHandler(log_handler)
+# logger.addHandler(log_handler)
 logger.addHandler(stderr_handler)
 logger.addHandler(stdout_handler)
 
