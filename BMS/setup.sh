@@ -43,7 +43,7 @@ sudo sed -i "s|WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")
 
 # Verify the service file
 echo "Service file updated:"
-ls -l "$SERVICE_PATH"cd
+ls -l "$SERVICE_PATH"
 
 # Reload systemd daemon
 echo "Reloading systemd daemon..."
