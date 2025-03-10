@@ -52,6 +52,8 @@ sudo sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT"
 }
 
 # Update log file paths
+SCRIPT_DIR=$(dirname "$BATTERY_SCRIPT")
+
 echo "Updating log file paths..."
 sudo sed -i "s|^StandardOutput=.*|StandardOutput=file:$SCRIPT_DIR/$STANDARD_OUTPUT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update StandardOutput in $SERVICE_PATH."
