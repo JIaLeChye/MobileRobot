@@ -7,7 +7,7 @@ import numpy as np
 
 
 picam = Picamera2()
-config = picam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))
+config = picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)},transform=Transform(vflip=1))
 picam.configure(config)
 picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
