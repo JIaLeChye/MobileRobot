@@ -15,7 +15,7 @@ Motor = RobotController()
 
 vertical = 2
 horizontal = 1
-Motor.set_servo(vertical, 180)
+Motor.set_servo(vertical, 90)
 Motor.set_servo(horizontal, 90)
 
 
@@ -67,7 +67,7 @@ def main():
                 largest_contour = max(contours, key=cv2.contourArea)
                 area = cv2.contourArea(largest_contour)
                 if area > 1500:
-                    x, y, w, h = cv2.boundingRect(contour)
+                    x, y, w, h = cv2.boundingRect(largest_contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                     # cv2.putText(img, f"Object {i + 1}", (x, y - 10), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
 
@@ -84,10 +84,10 @@ def main():
                     if center_y < 400:
                         if 50 < center_x < 320:
                             print("Turn right")
-                            Motor.move(speed=0, turn=20)
+                            Motor.move(speed=0, turn=30)
                         elif 400 < center_x < 600:
                             print("Turn left")
-                            Motor.move(speed=0, turn=-20)
+                            Motor.move(speed=0, turn=-30)
                         elif 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")
@@ -97,7 +97,9 @@ def main():
                     else:
                         print("Out of range")
                         Motor.Brake()
-
+        else: 
+            Motor.Brake()
+            print("Stoped! - Not Detected")
         cv2.imshow("Camera", mask)
         cv2.imshow("Result", img)
         if cv2.waitKey(1) == ord('q'):
