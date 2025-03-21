@@ -14,7 +14,7 @@ import time
 import cv2
 import numpy as np
 from picamera2 import Picamera2 
-from libcamera import controls
+from libcamera import controls, Transform 
 
 
 
@@ -59,7 +59,8 @@ print("Graph Loading Process Complete!")
 ## Initialize Picamera2 Library 
 
 cam = Picamera2()
-cam.configure(cam.create_preview_configuration(main={"format":'XRGB8888',"size": (frame_width, frame_height)}))
+
+cam.configure(cam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1)))
 cam.start()
 cam.set_controls({"AfMode":controls.AfModeEnum.Continuous}) # Enable auto focus 
  

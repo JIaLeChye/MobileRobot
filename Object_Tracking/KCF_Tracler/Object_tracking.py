@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from RPi_Robot_Hat_Lib import RobotController
 from picamera2 import Picamera2
-from libcamera import controls
+from libcamera import controls, Transform 
 import time
 
 tracker = cv2.TrackerKCF_create() 
@@ -12,7 +12,7 @@ tracker = cv2.TrackerKCF_create()
 frame_width = 640  
 frame_height = 480
 cap = Picamera2()
-cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (frame_height, frame_width)}))
+cap.configure(cap.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1)))
 cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 cap.start()
 
@@ -45,20 +45,20 @@ def tracking(frame, x,y,w,h):
     if center_y < 220 and center_y > 100:
         if center_x < 300:
             print("Turn Left")
-            Motor.move(speed=0, turn=20) 
+            Motor.move(speed=0, turn=-20) 
         if center_x > 340:
             print("Turn Right")
-            Motor.move(speed=0, turn=-20)
+            Motor.move(speed=0, turn= 20)
         else:
             Motor.Forward(20)
     # Slow Approch        
     elif center_y > 240 and center_y < 440:
         if center_x < 300:
             print("Turn Left")
-            Motor.move(speed=0, turn=10)
+            Motor.move(speed=0, turn=-10)
         if center_x > 340:
             print("Turn Right")
-            Motor.move(speed=0, turn=-10)
+            Motor.move(speed=0, turn=10)
         else:
             Motor.Forward(10)
     else:

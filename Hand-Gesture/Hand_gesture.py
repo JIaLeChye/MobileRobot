@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 from picamera2 import Picamera2
 from libcamera import controls
+from libcamera import Transform
 from RPi_Robot_Hat_Lib import RobotController
 
   
@@ -20,7 +21,7 @@ def init():
 
         # Start video capture
         cap = Picamera2(0)
-        cap.configure(cap.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+        cap.configure(cap.create_preview_configuration( main={"format": 'XRGB8888', "size": (640, 480)},transform=Transform(vflip=1)))  # Flip both horizontally and vertically
         cap.start()
         cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         vertical = 2

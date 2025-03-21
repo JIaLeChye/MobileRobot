@@ -4,7 +4,7 @@ from picamera2 import Picamera2
 from Ultrasonic_sens import Ultrasonic 
 from RPi_Robot_Hat_Lib import RobotController 
 import time 
-from libcamera import controls
+from libcamera import controls, Transform 
 
 
 ultrasonic = Ultrasonic()
@@ -19,7 +19,7 @@ rotation_speed = 20
 threshold = 30 
 min_thresh_dist = 10 
 picam2 = Picamera2() 
-picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1)))
 picam2.start()
 picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 frame_lock = threading.Lock()

@@ -90,6 +90,12 @@ sudo sed -i "s|^StandardError=.*|StandardError=file:$LOG_FILE_PATH/$STANDARD_ERR
 echo "Service file updated:"
 ls -l "$SERVICE_PATH"
 
+sudo systemctl enable "$SERVICE_NAME" || {
+    echo "Error: Failed to enable $SERVICE_NAME."
+    exit 1
+}
+echo "$SERVICE_NAME enabled" 
+
 # Reload systemd daemon
 echo "Reloading systemd daemon..."
 sudo systemctl daemon-reload || {

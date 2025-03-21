@@ -2,7 +2,7 @@ import cv2
 import time
 import numpy as np
 from picamera2 import Picamera2
-from libcamera import controls
+from libcamera import controls, Transform 
 from RPi_Robot_Hat_Lib import RobotController
 from Ultrasonic_sens import Ultrasonic
 import threading 
@@ -11,7 +11,7 @@ import threading
 
 # Initialize camera, motor, encoder, and ultrasonic sensor
 picam = Picamera2()
-picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+picam.configure(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))
 picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 Motor = RobotController()

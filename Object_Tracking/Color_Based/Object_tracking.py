@@ -1,13 +1,14 @@
 import cv2
 from picamera2 import Picamera2
-from libcamera import controls
+from libcamera import controls, Transform
 from RPi_Robot_Hat_Lib import RobotController 
 import numpy as np
 
 
 
 picam = Picamera2()
-picam.configure(picam.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+config = picam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))
+picam.configure(config)
 picam.start()
 picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 Motor = RobotController()
@@ -63,7 +64,8 @@ def main():
 
         if contours:
             for i, contour in enumerate(contours):
-                area = cv2.contourArea(contour)
+                largest_contour = max(contours, key=cv2.contourArea)
+                area = cv2.contourArea(largest_contour)
                 if area > 1500:
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -82,10 +84,10 @@ def main():
                     if center_y < 400:
                         if 50 < center_x < 320:
                             print("Turn right")
-                            Motor.move(speed=0, turn=-20)
+                            Motor.move(speed=0, turn=20)
                         elif 400 < center_x < 600:
                             print("Turn left")
-                            Motor.move(speed=0, turn=20)
+                            Motor.move(speed=0, turn=-20)
                         elif 320 <= center_x <= 400:
                             Motor.Forward(20)
                             print("Centered")

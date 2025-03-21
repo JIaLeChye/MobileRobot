@@ -1,5 +1,5 @@
 from picamera2 import Picamera2
-from libcamera import controls
+from libcamera import controls, Transform 
 import cv2
 import numpy as np
 import time
@@ -28,10 +28,8 @@ def init():
 
     # Set preview configuration (modify resolution as needed)
     picam2 = Picamera2()
-    picam2.preview_configuration.main.size = (640, 480)
-    picam2.preview_configuration.main.format = 'RGB888'
-    picam2.preview_configuration.align()
-    picam2.configure("preview")
+    config = picam2.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))
+    picam2.configure(config)
     picam2.start()  # Start camera preview
     ## Continous Auto Focus 
     picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
@@ -82,14 +80,14 @@ def main():
             
             if cx >= 350:
                 print("Going Left")
-                Motor.move(speed=0, turn=30)
+                Motor.move(speed=0, turn=-30)
             
             if cx < 350 and cx > 300:
                 print("On track")
                 Motor.Forward(40)
             if cx < 300:
                 print("Going Right")
-                Motor.move(speed =0 , turn=-30)
+                Motor.move(speed =0 , turn=30)
 
       
             

@@ -1,6 +1,6 @@
 import cv2 
 from picamera2 import Picamera2 
-from libcamera import controls
+from libcamera import controls, Transform
 import time 
 from RPi_Robot_Hat_Lib import RobotController
 
@@ -13,7 +13,7 @@ Motor.set_servo(vertical, 90)
 frame_width = 640 
 frame_height = 480 
 cam = Picamera2()
-cam.configure(cam.create_preview_configuration(main={"format": 'XRGB8888', "size": (frame_width, frame_height)})) 
+cam.configure(cam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))) 
 cam.start()
 cam.set_controls({"AfMode":controls.AfModeEnum.Continuous})
 

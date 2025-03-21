@@ -3,17 +3,15 @@ import cv2
 import numpy as np
 import time
 from picamera2 import Picamera2
-from libcamera import controls 
+from libcamera import controls, Transform 
 # A required callback method that goes into the trackbar function.
 def nothing(x):
     pass
 
 # Initializing the webcam feed.
 picam2 = Picamera2()
-picam2.preview_configuration.main.size = (640, 480)  # Change resolution if needed
-picam2.preview_configuration.main.format = 'RGB888'
-picam2.preview_configuration.align()
-picam2.configure("preview")
+config = picam2.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1))
+picam2.configure(config)
 picam2.start() 
 picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
