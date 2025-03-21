@@ -26,8 +26,8 @@ def init():
         cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         vertical = 2
         horizontal = 1
-        Motor.set_servo(vertical, 60)
-        Motor.set_servo(horizontal, 90)
+        Motor.set_servo(vertical, 40)
+        Motor.set_servo(horizontal, 92)
 
    
     
@@ -47,10 +47,10 @@ def control_car(hand_landmarks):
         # Example: Determine if landmark 9 is to the left, right, or center
         motorFreq = 30 # set the speed of the motor to 20 
         if landmark_9_x < 0.3:
-                direction = "left"
+                direction = "right"
                 
         elif landmark_9_x > 0.7:
-                direction = "right"
+                direction = "left"
 
         else:
                 direction = "center"
@@ -68,10 +68,10 @@ def control_car(hand_landmarks):
         
         if direction == "left":
                 print("Turn left")
-                Motor.move(speed= 0 , turn=15)
+                Motor.move(speed= 0 , turn=-30)
         elif direction == "right":
                 print("Turn right")
-                Motor.move(speed=0, turn=-15)
+                Motor.move(speed=0, turn=30)
         else:
                 # Move the car forward or stop based on distance
                 if distance == "close":
