@@ -48,6 +48,7 @@ def colorPicker():
         stacked = np.hstack((mask, img, res))
         cv2.imshow("Color_Picker", cv2.resize(stacked, None, fx=0.4, fy=0.4))
         if cv2.waitKey(1) & 0xFF == ord('s'):
+            cv2.destroyAllWindows()
             break
     return lower_bound, upper_bound 
 
