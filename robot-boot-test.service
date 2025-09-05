@@ -1,0 +1,18 @@
+[Unit]
+Description=Mobile Robot Boot Self-Test
+After=multi-user.target
+Wants=i2c.service
+
+[Service]
+Type=oneshot
+User=raspberry
+Group=raspberry
+WorkingDirectory=/home/raspberry/Desktop/MobileRobot
+ExecStart=/usr/bin/python3 /home/raspberry/Desktop/MobileRobot/boot_self_test.py --full
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=300
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

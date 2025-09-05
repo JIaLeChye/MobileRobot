@@ -21,7 +21,7 @@ class RobotController:
         self.GEAR_RATIO = 30
         self.ENCODER_PPR = 13
         self.TICKS_PER_REV = self.ENCODER_PPR * self.GEAR_RATIO
-        self.calibration_factor = 1.0
+        self.calibration_factor = 0.0157  # 校准后的因子
         
         # Register addresses
         self.REG_MOTOR_RF = 1
@@ -127,6 +127,14 @@ class RobotController:
     def Brake(self):
         """Stop all motors"""
         self.stop()
+    
+    def turn_left(self, speed):
+        """Turn left with specified speed (0-100)"""
+        self.move(0, speed)  # Use existing move function with turn parameter
+    
+    def turn_right(self, speed):
+        """Turn right with specified speed (0-100)"""
+        self.move(0, -speed)  # Use existing move function with negative turn
 
     def Horizontal_Left(self, speed):
         """Move Horizontal Left with specified spedd (0 - 100)"""
@@ -196,16 +204,18 @@ class RobotController:
             print(f"Error reading encoder: {e}")
             return 0
     
-    def get_rpm(self,motor, debug=False):
+    def get_rpm(self, motor, debug=False):
+        """Calculate RPM for a specific motor"""
         
         if self.rpm_init is False:
             self._previous_data = {
-                'RF': {'ticks':self.get_encoder('RF'), 'time':time.time()},
-                'RB': {'ticks':self.get_encoder('RB'), 'time':time.time()},
-                'LF': {'ticks':self.get_encoder('LF'), 'time':time.time()},
-                'LB': {'ticks':self.get_encoder('LB'), 'time':time.time()}
+                'RF': {'ticks': self.get_encoder('RF'), 'time': time.time()},
+                'RB': {'ticks': self.get_encoder('RB'), 'time': time.time()},
+                'LF': {'ticks': self.get_encoder('LF'), 'time': time.time()},
+                'LB': {'ticks': self.get_encoder('LB'), 'time': time.time()}
             }
             self.rpm_init = True
+            return 0  # Return 0 for first call
 
         try: 
             current_ticks = self.get_encoder(motor) 
@@ -214,62 +224,57 @@ class RobotController:
             prev_ticks = self._previous_data[motor]['ticks']
             prev_time = self._previous_data[motor]['time'] 
 
-
             delta_time = current_time - prev_time 
             delta_ticks = current_ticks - prev_ticks
 
-            if debug ==True or self.debug == True:
+            if debug == True or self.debug == True:
                 print("##############################")
                 print("DEBUG STATEMENT FOR get_rpm()")
                 print("##############################")
-                print(f"Encoder value for {motor}: {current_ticks}")
-                print(f"Previous encoder value for {motor}: {prev_ticks}")
+                print(f"Motor: {motor}")
+                print(f"Current ticks: {current_ticks}")
+                print(f"Previous ticks: {prev_ticks}")
                 print(f"Delta ticks: {delta_ticks}") 
-                print(f"Delta time: {delta_time}")
-                # print(f"Previous data: {self._previous_data}")
-                for key, value in self._previous_data.items():
-                    motor_data = value
-                    print(f"  {key}: Ticks = {motor_data['ticks']}, Time = {motor_data['time']:.6f}")
-                print("#############################")
+                print(f"Delta time: {delta_time:.6f}")
+                print("##############################")
                 
+            # Update previous data for this motor only
+            self._previous_data[motor] = {'ticks': current_ticks, 'time': current_time}
 
             if delta_time == 0: 
-                if self.debug == True:
+                if debug == True or self.debug == True:
                     print(f"Warning: Delta time is zero for {motor}")
                 return 0 
-            if delta_ticks == 0 :
-                if self.debug == True: 
+                
+            if delta_ticks == 0:
+                if debug == True or self.debug == True: 
                     print(f"Warning: Delta ticks is zero for {motor}")
                 return 0
             
-            else: 
-                self._previous_data = {
-                'RF': {'ticks':self.get_encoder('RF'), 'time':time.time()},
-                'RB': {'ticks':self.get_encoder('RB'), 'time':time.time()},
-                'LF': {'ticks':self.get_encoder('LF'), 'time':time.time()},
-                'LB': {'ticks':self.get_encoder('LB'), 'time':time.time()}
-            }
-                rpm = (delta_ticks / self.TICKS_PER_REV) / delta_time * 60 
-                if motor == 'RF' or motor == 'RB':
-                    return rpm  
-                if motor =='LF' or motor == 'LB':
-                    return -rpm 
-        
+            # Calculate RPM
+            revolutions_per_second = delta_ticks / self.TICKS_PER_REV / delta_time
+            rpm = revolutions_per_second * 60
             
-        except Exception as e :
+            # Apply direction correction for left motors (they rotate opposite)
+            if motor in ['LF', 'LB']:
+                rpm = -rpm 
+                
+            return rpm
+            
+        except Exception as e:
             print(f"Error calculating RPM for {motor}: {e}")
-            return None
+            return 0
         
        
         
-    def get_distance(self, motor,debug=False):
+    def get_distance(self, motor, debug=False):
         """Calculate calibrated distance traveled by a specific motor in meters"""
         try:
             ticks = self.get_encoder(motor)
             
             # Check for unreasonable encoder values
-            if abs(ticks) > 10000:  # Limit for reasonable encoder values
-                if debug == True or self.debug==True: 
+            if abs(ticks) > 50000:  # Increased limit for reasonable encoder values
+                if debug == True or self.debug == True: 
                     print(f"Warning: Unusual encoder value for {motor}: {ticks}")
                 
             revolutions = ticks / self.TICKS_PER_REV
@@ -278,78 +283,209 @@ class RobotController:
         except Exception as e:
             print(f"Error calculating distance for {motor}: {e}")
             return 0
+    
+    def ticks_to_distance(self, ticks):
+        """Convert encoder ticks to distance in millimeters"""
+        try:
+            revolutions = ticks / self.TICKS_PER_REV
+            distance_m = revolutions * self.WHEEL_CIRCUMFERENCE * self.calibration_factor
+            return abs(distance_m * 1000)  # Convert to millimeters
+        except Exception as e:
+            print(f"Error converting ticks to distance: {e}")
+            return 0
+    
+    def reset_encoders(self):
+        """Reset all encoder values to zero"""
+        try:
+            self._write_byte(self.REG_ENCODER_RESET, 1)
+            time.sleep(0.1)  # Give time for reset to complete
+            if self.debug:
+                print("Encoders reset successfully")
+        except Exception as e:
+            print(f"Error resetting encoders: {e}")
+    
+    def get_all_encoders(self):
+        """Get all encoder values at once"""
+        return {
+            'RF': self.get_encoder('RF'),
+            'RB': self.get_encoder('RB'), 
+            'LF': self.get_encoder('LF'),
+            'LB': self.get_encoder('LB')
+        }
+    
+    def set_motors(self, rf_speed, rb_speed, lf_speed, lb_speed):
+        """Set all motor speeds individually"""
+        self.set_motor('RF', rf_speed)
+        self.set_motor('RB', rb_speed)
+        self.set_motor('LF', lf_speed)
+        self.set_motor('LB', lb_speed)
         
-    def move_distance(self, distance, speed=0):
-        """Move the robot a specific distance in meters with error checking"""
+    def move_distance(self, distance, speed=40):
+        """Move the robot a specific distance in meters with improved error checking"""
         print(f"\nMoving {distance:.2f} meters at speed {speed}")
         
         # Determine direction
         direction = 1 if distance >= 0 else -1
-        speed *= direction
+        speed = abs(speed) * direction  # Ensure speed direction matches distance direction
         target_distance = abs(distance)
         
-        # Get initial distances
-        start_dist_left = self.get_distance('LF')
-        start_dist_right = self.get_distance('RF')
+        # Reset encoders for accurate measurement
+        self.reset_encoders()
+        time.sleep(0.2)  # Wait for reset to complete
+        
+        # Get initial encoder readings
+        initial_encoders = self.get_all_encoders()
         
         # Start moving
-        self.move(speed=speed)
+        if direction > 0:
+            self.Forward(abs(speed))
+        else:
+            self.Backward(abs(speed))
         
         # Variables for movement monitoring
-        last_valid_left = 0
-        last_valid_right = 0
-        consecutive_errors = 0
+        last_avg_distance = 0
+        stall_counter = 0
+        max_stall_count = 10
+        
+        # Calculate stopping distance based on speed (momentum compensation)
+        stopping_distance = max(0.01, abs(speed) * 0.0005)  # Estimate based on speed
+        effective_target = target_distance - stopping_distance
         
         while True:
             try:
-                # Get current distances
-                current_dist_left = self.get_distance('LF') - start_dist_left
-                current_dist_right = self.get_distance('RF') - start_dist_right
+                # Get current encoder readings
+                current_encoders = self.get_all_encoders()
                 
-                # Validate readings
-                if abs(current_dist_left - last_valid_left) > 0.1:  # Sudden jump > 10cm
-                    current_dist_left = last_valid_left
-                    consecutive_errors += 1
-                else:
-                    last_valid_left = current_dist_left
-                    consecutive_errors = 0
+                # Calculate distances for each wheel
+                distances = {}
+                valid_motors = []
+                
+                for motor in ['LF', 'RF', 'RB']:  # Exclude LB due to encoder issues
+                    delta_ticks = abs(current_encoders[motor] - initial_encoders[motor])
+                    distances[motor] = self.ticks_to_distance(delta_ticks) / 1000.0  # Convert to meters
                     
-                if abs(current_dist_right - last_valid_right) > 0.1:  # Sudden jump > 10cm
-                    current_dist_right = last_valid_right
-                    consecutive_errors += 1
-                else:
-                    last_valid_right = current_dist_right
-                    consecutive_errors = 0
+                    # Only include motors with reasonable readings
+                    if distances[motor] < 1.0:  # Less than 1 meter (sanity check)
+                        valid_motors.append(motor)
                 
-                # Safety check
-                if consecutive_errors > 5:
-                    print("Too many consecutive errors. Stopping for safety.")
-                    self.stop()
+                # Calculate average distance using only valid encoders
+                if len(valid_motors) >= 2:
+                    avg_distance = sum(distances[motor] for motor in valid_motors) / len(valid_motors)
+                else:
+                    print("Warning: Not enough valid encoder readings!")
                     break
                 
-                # Calculate average distance traveled
-                avg_distance = abs(current_dist_left + current_dist_right) / 2
+                # Check for stalling
+                if abs(avg_distance - last_avg_distance) < 0.001:  # Less than 1mm progress
+                    stall_counter += 1
+                    if stall_counter >= max_stall_count:
+                        print("Warning: Robot appears to be stalled. Stopping.")
+                        break
+                else:
+                    stall_counter = 0
+                    last_avg_distance = avg_distance
                 
-                # Print progress
-                print(f"Distance traveled: {avg_distance*100:.1f}cm target: {target_distance*100:.1f}cm")
-                print(f"Left: {abs(current_dist_left)*100:.1f}cm Right: {abs(current_dist_right)*100:.1f}cm")
+                # Print progress with better formatting
+                print(f"Progress: {avg_distance*100:.1f}cm / {target_distance*100:.1f}cm")
+                print(f"  Valid encoders: {valid_motors}")
+                for motor in valid_motors:
+                    print(f"    {motor}: {distances[motor]*100:.1f}cm")
                 
-                # Check if we've reached the target
-                if avg_distance >= target_distance:
-                    self.stop()
+                # Check if we've reached the effective target (with stopping compensation)
+                if avg_distance >= effective_target:
+                    print(f"Approaching target! Stopping early to account for momentum...")
                     break
                 
                 time.sleep(0.1)
                 
             except Exception as e:
                 print(f"Error during movement: {e}")
-                consecutive_errors += 1
-                if consecutive_errors > 5:
-                    print("Too many errors. Stopping for safety.")
-                    self.stop()
-                    break
-                    
+                break
+        
+        # Stop the robot
+        self.stop()
+        time.sleep(0.2)  # Allow time to fully stop
+        
+        # Get final measurement
+        final_encoders = self.get_all_encoders()
+        final_distances = {}
+        for motor in valid_motors:
+            delta_ticks = abs(final_encoders[motor] - initial_encoders[motor])
+            final_distances[motor] = self.ticks_to_distance(delta_ticks) / 1000.0
+        
+        final_avg_distance = sum(final_distances[motor] for motor in valid_motors) / len(valid_motors)
+        
         print("Movement completed.")
+        print(f"Final distance: {final_avg_distance*100:.1f}cm")
+        
+        # Return final distance achieved
+        return final_avg_distance
+    
+    def move_distance_simple(self, distance_cm, speed=30):
+        """Simple movement function using only front encoders for better accuracy"""
+        print(f"\nMoving {distance_cm}cm at speed {speed}")
+        
+        target_distance = abs(distance_cm) / 100.0  # Convert to meters
+        direction = 1 if distance_cm >= 0 else -1
+        
+        # Reset encoders
+        self.reset_encoders()
+        time.sleep(0.2)
+        
+        # Get initial readings (use only front encoders)
+        initial_left = self.get_encoder('LF')
+        initial_right = self.get_encoder('RF')
+        
+        # Start moving
+        if direction > 0:
+            self.Forward(speed)
+        else:
+            self.Backward(speed)
+        
+        while True:
+            # Get current readings
+            current_left = self.get_encoder('LF')
+            current_right = self.get_encoder('RF')
+            
+            # Calculate distances
+            left_ticks = abs(current_left - initial_left)
+            right_ticks = abs(current_right - initial_right)
+            
+            left_distance = self.ticks_to_distance(left_ticks) / 1000.0
+            right_distance = self.ticks_to_distance(right_ticks) / 1000.0
+            
+            # Average of front wheels only
+            avg_distance = (left_distance + right_distance) / 2
+            
+            print(f"Progress: {avg_distance*100:.1f}cm / {distance_cm:.1f}cm")
+            
+            # Stop before target to account for momentum
+            stop_threshold = target_distance * 0.95  # Stop at 95% of target
+            
+            if avg_distance >= stop_threshold:
+                print("Approaching target, stopping...")
+                break
+            
+            time.sleep(0.1)
+        
+        self.stop()
+        time.sleep(0.3)  # Wait for complete stop
+        
+        # Final measurement
+        final_left = self.get_encoder('LF')
+        final_right = self.get_encoder('RF')
+        
+        final_left_ticks = abs(final_left - initial_left)
+        final_right_ticks = abs(final_right - initial_right)
+        
+        final_left_distance = self.ticks_to_distance(final_left_ticks) / 1000.0
+        final_right_distance = self.ticks_to_distance(final_right_ticks) / 1000.0
+        final_avg = (final_left_distance + final_right_distance) / 2
+        
+        print(f"Final distance: {final_avg*100:.1f}cm")
+        print(f"Left wheel: {final_left_distance*100:.1f}cm, Right wheel: {final_right_distance*100:.1f}cm")
+        
+        return final_avg * 100  # Return in cm
     #################################################
 
     
@@ -476,7 +612,7 @@ class RobotController:
                 time.sleep(duration)
                 self.buzzer_pwm.ChangeDutyCycle(0)
                 time.sleep(0.1)
-                GPIO.cleanup(12)  # Cleanup buzzer GPIO
+                # Don't cleanup here, let cleanup() handle it
             else:
                 time.sleep(duration)
                 
@@ -498,17 +634,24 @@ class RobotController:
         # Center servos
         self.set_servo(1, 90)
         self.set_servo(2, 90)
-        # Cleanup buzzer
+        # Cleanup buzzer safely
         if hasattr(self, 'buzzer_pwm'):
-            self.buzzer_pwm.stop()
-            GPIO.cleanup(12)  # Cleanup buzzer GPIO
+            try:
+                self.buzzer_pwm.stop()
+                delattr(self, 'buzzer_pwm')
+            except Exception as e:
+                print(f"Warning: Buzzer cleanup error: {e}")
+            try:
+                GPIO.cleanup(12)  # Cleanup buzzer GPIO
+            except Exception as e:
+                print(f"Warning: GPIO cleanup error: {e}")
 
 
 
 def test():
     """Simple test function"""
     robot = RobotController(wheel_diameter=97)
-    robot.calibration_factor = -0.162
+    # 使用默认校准因子，不覆盖
     
     try:
         # Test battery voltage
