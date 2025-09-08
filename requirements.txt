@@ -1,10 +1,22 @@
-Adafruit_Blinka==8.54.0
-adafruit_circuitpython_ssd1306==2.12.19
-git+https://github.com/vshymanskyy/blynk-library-python.git
-mediapipe==0.10.18
-numpy
-opencv_contrib_python==4.11.0.86
-Pillow==11.1.0
-smbus==1.1.post2
-tensorflow==2.18.0
-tflite_runtime==2.14.0
+# Core libraries for Mobile Robot
+rpi-lgpio>=0.6              # Modern GPIO library for Raspberry Pi 5
+adafruit-circuitpython-ssd1306  # OLED display
+adafruit-circuitpython-pca9685  # Servo/motor control
+smbus2                       # I2C communication
+numpy                        # Numerical computing
+opencv-contrib-python        # Computer vision (includes basic OpenCV)
+Pillow                       # Image processing
+picamera2                    # Raspberry Pi camera (if not system-installed)
+
+# TensorFlow Lite and Machine Learning
+tflite-runtime              # TensorFlow Lite runtime for object detection
+mediapipe                   # Google's ML framework for hand gesture recognition
+
+# Computer Vision and Recognition
+apriltag                    # April Tag detection and recognition
+
+# IoT and Remote Control (from GitHub)
+git+https://github.com/vshymanskyy/blynk-library-python.git  # Mobile app remote control integration
+
+# Additional Adafruit CircuitPython dependencies
+adafruit-circuitpython-busdevice  # I2C/SPI device support
