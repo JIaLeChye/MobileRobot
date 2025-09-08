@@ -1,0 +1,42 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Auto increment version and create release
+      run: |
+        # Get current version
+        CURRENT=$(grep '__version__ = ' version.py | sed 's/__version__ = "\(.*\)"/\1/')
+        
+        # Increment patch version
+        IFS='.' read -r major minor patch <<< "$CURRENT"
+        NEW_PATCH=$((patch + 1))
+        NEW_VERSION="$major.$minor.$NEW_PATCH"
+        
+        # Update version.py
+        sed -i "s/__version__ = \"$CURRENT\"/__version__ = \"$NEW_VERSION\"/" version.py
+        
+        # Update README badge
+        sed -i "s/version-$CURRENT-blue/version-$NEW_VERSION-blue/" README.md
+        
+        # Commit and tag
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add version.py README.md
+        git commit -m "🚀 Release v$NEW_VERSION" || exit 0
+        git tag "v$NEW_VERSION"
+        git push
+        git push --tags
+        
+        echo "Released version $NEW_VERSION"
