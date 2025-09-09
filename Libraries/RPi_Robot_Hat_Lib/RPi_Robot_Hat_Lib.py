@@ -95,10 +95,7 @@ class RobotController:
             print(f"Error during system reset: {e}")
             return False
         
-    ####################################
-
-
-
+    ###################################
 
     ##---------Movement Section-------##
     def Forward(self, speed):
