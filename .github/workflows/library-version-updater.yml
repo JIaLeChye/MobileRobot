@@ -159,8 +159,16 @@ jobs:
           done
         }
         
-        # Get changed files in this push
+        # Get changed files in this push - look at original commit, not release commits
         changed_files=$(git diff --name-only HEAD~1 HEAD)
+        
+        # If the only change is version.py, look at the previous commit instead
+        # This handles the case where auto-version.yml ran first
+        if [ "$changed_files" = "version.py" ] || [ "$changed_files" = "README.md" ] || [[ "$changed_files" == *"version.py"* && "$changed_files" == *"README.md"* ]]; then
+          echo "🔍 Detected release commit, checking previous commit for library changes..."
+          changed_files=$(git diff --name-only HEAD~2 HEAD~1)
+        fi
+        
         echo "📝 Changed files:"
         echo "$changed_files"
         echo ""
