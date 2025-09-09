@@ -28,31 +28,123 @@ A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with a
 ## 📋 Table of Contents
 - [Quick Start](#quick-start)
 - [Installation](#installation)
+- [Repository Structure](#repository-structure)
 - [Hardware Requirements](#hardware-requirements)
 - [User Applications](#user-applications)
 - [Libraries](#libraries)
 - [Contributing](#contributing)
-- [Version Control](#version-control)
 - [Documentation](#documentation)
 
 ## ⚡ Quick Start
 
-1. **Clone the repository**:
+### 📥 Download & Setup
+
+1. **Download the repository**:
    ```bash
    git clone https://github.com/JIaLeChye/MobileRobot.git
    cd MobileRobot
    ```
 
-2. **Run the setup script**:
+2. **Run the automatic setup**:
    ```bash
    chmod +x setup.sh
    ./setup.sh
    ```
+   
+   This script will:
+   - ✅ Install all required Python packages
+   - ✅ Set up the robot control libraries
+   - ✅ Configure hardware interfaces
+   - ✅ Test the installation
+
+### 🎮 Explore the Examples
+
+After setup, you can run any example directly:
+
+```bash
+# Motor control basics
+cd Motor_and_Encoder
+python3 Motor_and_Encoder.py
+
+# Line following with camera
+cd Line_Following/With_OpenCV
+python3 Line_Following.py
+
+# Object tracking
+cd Object_Tracking/Color_Based
+python3 Color_Based_Tracking.py
+
+# Remote control via mobile app
+cd Mobile_Controller/Mobile_Controller
+python3 Mobile_Controller.py
+```
+
+### 📚 Understanding the Code
+
+- **Libraries/**: Core robot functionality - start here to understand the basics
+- **Examples/**: Each folder contains working examples with specific features
+- **Documentation**: Each folder has its own README with detailed explanations
+
+### 🔧 Customization
+
+All examples are designed to be easily modified:
+1. Open any Python file in your favorite editor
+2. Modify parameters, thresholds, or behavior
+3. Run the modified code to see changes
+
+### 🆘 Need Help?
+
+1. Check the README.md in each folder
+2. Look at the code comments for explanations
+3. Start with simple examples before complex ones
+4. Use the Libraries/ folder to understand core functions
+
+## 📁 Repository Structure
+
+The repository is organized by functionality to make it easy to explore:
+
+```
+MobileRobot/
+├── 📖 README.md                    # This file - start here!
+├── ⚡ setup.sh                     # One-click installation script
+├── 📋 requirements.txt             # Python dependencies
+│
+├── 🚗 Motor_and_Encoder/           # Basic motor control with encoders
+├── 🎯 Line_Following/              # Line following algorithms
+│   ├── With_OpenCV/                # Vision-based line following
+│   └── With_Sensors/               # Sensor-based line following
+├── 🚧 Obstacle_Avoidance/          # Obstacle detection and avoidance
+│   ├── with_camera/                # Vision-based avoidance
+│   └── without_camera/             # Sensor-based avoidance
+├── 👁️ Object_Tracking/             # Object detection and tracking
+│   ├── Color_Based/                # Color-based tracking
+│   └── KCF_Tracker/                # Advanced tracking algorithms
+├── 🤖 Object-Recognition(TF)/      # TensorFlow object recognition
+├── 📱 Mobile_Controller/           # Remote control via mobile app
+├── 👋 Hand-Gesture/                # Gesture-based control
+├── 🏷️ April_Tag_Recognition/       # AprilTag detection and tracking
+├── 📷 QR_Code_Recognition/         # QR code detection
+├── 🎨 HSV_Color_Picker/            # Color calibration tool
+├── 🔋 BMS/                         # Battery management system
+│
+└── 📚 Libraries/                   # Core robot libraries
+    ├── RPi_Robot_Hat_Lib/          # Main robot control library
+    ├── Ultrasonic_Sensor/          # Distance sensor library
+    └── IR_Sensor/                  # Infrared sensor library
+```
+
+### 🎯 How to Use This Repository
+
+1. **🚀 Start with setup.sh** - Installs everything automatically
+2. **📚 Check Libraries/** - Core functionality for all applications  
+3. **🎮 Explore Applications** - Each folder contains working examples
+4. **📖 Read Documentation** - Each folder has its own README
+5. **🔧 Customize** - Modify examples for your specific needs
 
 3. **Test your robot**:
    ```bash
    source venv/bin/activate
-   python robot_self_check.py
+   python unified_self_test.py
    ```
 
 ## 🔧 Installation
@@ -179,8 +271,59 @@ We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTIN
 
 ## 📖 Version Control & Changelog
 
-This project follows [Semantic Versioning](https://semver.org/):
+This project follows [Semantic Versioning](https://semver.org/) with **automatic version management**:
 - **Major.Minor.Patch** (e.g., 1.2.3)
+
+### 🔄 Automatic Library Versioning System
+
+The project includes an automatic versioning system that manages library versions based on Git commits.
+
+#### How It Works
+- **Automatic Versioning**: Pre-commit hook automatically increments patch version (+0.0.1) when library files are modified
+- **Manual Versioning**: Use `./bump_version.sh [major|minor|patch] [library_name]` for major or minor updates
+- **Monitored Libraries**:
+  - `Libraries/RPi_Robot_Hat_Lib/`
+  - `Libraries/Ultrasonic_Sensor/`
+  - `Libraries/IR_Sensor/`
+
+#### Version Rules
+- **Automatic (+0.0.1)**: Bug fixes, small improvements, code optimization, documentation updates
+- **Manual Major (+1.0.0)**: Breaking changes, major feature overhauls, API changes
+- **Manual Minor (+0.1.0)**: New significant features, new API methods, backward-compatible improvements
+
+#### Current Library Versions
+- **RPi_Robot_Hat_Lib**: 1.2.2
+- **Ultrasonic_sens**: 1.0.0
+- **IRSens**: 1.0.0
+
+#### Example Workflow
+```bash
+# Regular development (automatic versioning)
+git add Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py
+git commit -m "Fix encoder filtering bug"
+# ✅ Version automatically bumped: 1.2.2 → 1.2.3
+
+# Major feature release (manual versioning)
+./bump_version.sh major RPi_Robot_Hat_Lib
+git add .
+git commit -m "Major update: Add new movement algorithms"
+# ✅ Version manually bumped: 1.2.3 → 2.0.0
+```
+
+#### Files Managed
+- `Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py` - Main library with version string
+- `Libraries/RPi_Robot_Hat_Lib/setup.py` - Package setup with version
+- `Libraries/Ultrasonic_Sensor/setup.py` - Sensor library setup
+- `Libraries/IR_Sensor/setup.py` - IR sensor library setup
+- `.git/hooks/pre-commit` - Automatic version detection hook
+- `bump_version.sh` - Manual version management script
+
+#### Benefits
+- **No manual version tracking** - Automatic patch increments
+- **Consistent versioning** - All related files stay in sync  
+- **Git integration** - Works seamlessly with your workflow
+- **Flexible control** - Manual override for major/minor versions
+- **Clear history** - Version changes are tracked in Git commits
 
 ### Current Version: 2.0.0
 - ✅ Raspberry Pi 5 compatibility
@@ -193,16 +336,30 @@ This project follows [Semantic Versioning](https://semver.org/):
 All notable changes to the MobileRobot project are documented below.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+#### [2.0.1] - 2025-09-09
+
+**Added**
+- **Automatic Library Versioning System** - Pre-commit hooks automatically increment patch versions
+- **Manual Version Management** - `bump_version.sh` script for major/minor version control
+- **Global Library Installation** - Libraries properly installed as system-wide Python packages
+- **LB Encoder Support** - Added left-back encoder to precision movement functions
+- **Enhanced Move Distance Function** - Improved encoder filtering and validation logic
+- **Version Synchronization** - Automatic sync between library files and setup.py versions
+
+**Fixed**
+- LB encoder missing from valid encoders list in precision movement
+- Encoder filtering threshold optimized from 1.0m to 0.5m for better accuracy
+- Global vs local library installation issues resolved
+
 #### [2.0.0] - 2025-09-08
 
 **Added**
 - Raspberry Pi 5 compatibility with rpi-lgpio library
 - picamera2 support for Pi 5 camera functionality
-- Comprehensive `robot_self_check.py` for hardware diagnostics
+- Unified comprehensive test suite (`unified_self_test.py`) for hardware diagnostics
 - `import_helper.py` for centralized library imports
 - Enhanced setup.sh script with Pi 5 detection and configuration
 - **Proper Python package installation** - Libraries now install as system-wide packages
-- **Automated versioning** - GitHub Actions automatically manage releases
 - Automatic setup.py creation for sensor libraries
 - Import testing in setup script
 - OLED display integration for test results
@@ -215,11 +372,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Centralized library structure - removed duplicate files
 - Updated dependencies to Python 3.8+ minimum
 - Improved error handling in hardware initialization
+- Consolidated test scripts into single unified test suite
 
 **Removed**
-- 18 duplicate and obsolete files including:
+- 21 duplicate and obsolete files including:
   - Multiple copies of RPi_Robot_Hat_Lib.py across application folders
-  - Old test files: boot_self_test.py, complete_self_test.py
+  - Old test files: boot_self_test.py, complete_self_test.py, robot_self_check.py
   - Obsolete service files and installation scripts
   - Individual component test scripts
 

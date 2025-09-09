@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="ultrasonic-sensor-lib",
+    version="1.0.1", 
+    description="Ultrasonic sensor library for robot navigation",
+    long_description="A library for controlling ultrasonic sensors on Raspberry Pi robots, providing distance measurement and obstacle detection capabilities.",
+    long_description_content_type="text/plain",
+    author="JIaLeChye",
+    author_email="jialecjl2016@outlook.com",
+    url="https://github.com/JIaLeChye/MobileRobot",
+    packages=find_packages(),
+    py_modules=["Ultrasonic_sens"],
+    install_requires=[
+        "rpi-lgpio>=0.4",
+    ],
+    python_requires=">=3.7",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: System :: Hardware",
+        "Topic :: Education",
+        "Topic :: Scientific/Engineering",
+    ],
+    keywords="raspberry-pi, ultrasonic, sensors, robotics, distance-measurement",
+)

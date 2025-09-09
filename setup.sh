@@ -119,26 +119,74 @@ else
 fi
 check_status "GitHub dependencies installation"
 
-# Configure Python paths (simpler than setup.py installations)
-echo "🛤️ Configuring Python paths..."
+# Install custom robot libraries globally
+echo "🤖 Installing custom robot libraries globally..."
 ROBOT_PATH="/home/raspberry/Desktop/MobileRobot"
 
-# Add to current session
-export PYTHONPATH="$PYTHONPATH:$ROBOT_PATH"
-export PYTHONPATH="$PYTHONPATH:$ROBOT_PATH/Libraries/Ultrasonic_Sensor"
-export PYTHONPATH="$PYTHONPATH:$ROBOT_PATH/Libraries/IR_Sensor"
+# Install RPi_Robot_Hat_Lib
+echo "Installing RPi_Robot_Hat_Lib..."
+cd "$ROBOT_PATH/Libraries/RPi_Robot_Hat_Lib"
+cat > setup.py << 'EOF'
+from setuptools import setup, find_packages
 
-# Add to bashrc for future sessions
-if ! grep -q "MobileRobot Python paths" ~/.bashrc; then
-    echo "
-# MobileRobot Python paths
-export PYTHONPATH=\"\$PYTHONPATH:$ROBOT_PATH\"
-export PYTHONPATH=\"\$PYTHONPATH:$ROBOT_PATH/Libraries/Ultrasonic_Sensor\"
-export PYTHONPATH=\"\$PYTHONPATH:$ROBOT_PATH/Libraries/IR_Sensor\"
-" >> ~/.bashrc
-fi
+setup(
+    name="RPi_Robot_Hat_Lib",
+    version="1.0.0",
+    description="Raspberry Pi Robot Hat Library with encoder support",
+    py_modules=["RPi_Robot_Hat_Lib", "Encoder"],
+    install_requires=[
+        "smbus2",
+        "rpi-lgpio",
+    ],
+    python_requires=">=3.7",
+)
+EOF
+sudo pip install .
+cd "$ROBOT_PATH"
 
-check_status "Python path configuration"
+# Install Ultrasonic_sens
+echo "Installing Ultrasonic sensor library..."
+cd "$ROBOT_PATH/Libraries/Ultrasonic_Sensor"
+cat > setup.py << 'EOF'
+from setuptools import setup, find_packages
+
+setup(
+    name="Ultrasonic_sens",
+    version="1.0.0",
+    description="Ultrasonic sensor library for robot navigation",
+    py_modules=["Ultrasonic_sens"],
+    install_requires=[
+        "rpi-lgpio",
+    ],
+    python_requires=">=3.7",
+)
+EOF
+sudo pip install .
+cd "$ROBOT_PATH"
+
+# Install IRSens
+echo "Installing IR sensor library..."
+cd "$ROBOT_PATH/Libraries/IR_Sensor"
+cat > setup.py << 'EOF'
+from setuptools import setup, find_packages
+
+setup(
+    name="IRSens",
+    version="1.0.0",
+    description="IR sensor library for obstacle detection",
+    py_modules=["IRSens"],
+    install_requires=[
+        "rpi-lgpio",
+    ],
+    python_requires=">=3.7",
+)
+EOF
+sudo pip install .
+cd "$ROBOT_PATH"
+
+echo "✓ All custom libraries installed globally"
+
+check_status "Custom libraries installation"
 
 # Set up permissions for GPIO and I2C
 echo "🔐 Setting up GPIO and I2C permissions..."
@@ -148,31 +196,26 @@ check_status "Permissions setup"
 # Test imports to verify everything works
 echo "🧪 Testing library imports..."
 python3 -c "
-import sys
-sys.path.insert(0, '$ROBOT_PATH')
-sys.path.insert(0, '$ROBOT_PATH/Libraries/Ultrasonic_Sensor')
-sys.path.insert(0, '$ROBOT_PATH/Libraries/IR_Sensor')
-
 success_count = 0
 total_tests = 7
 
 try:
     from RPi_Robot_Hat_Lib import RobotController
-    print('✓ RPi_Robot_Hat_Lib imported successfully')
+    print('✓ RPi_Robot_Hat_Lib imported successfully (globally installed)')
     success_count += 1
 except ImportError as e:
     print('✗ RPi_Robot_Hat_Lib import failed:', e)
 
 try:
     from Ultrasonic_sens import Ultrasonic
-    print('✓ Ultrasonic sensor library imported successfully')
+    print('✓ Ultrasonic sensor library imported successfully (globally installed)')
     success_count += 1
 except ImportError as e:
     print('✗ Ultrasonic sensor library import failed:', e)
 
 try:
     from IRSens import IRsens
-    print('✓ IR sensor library imported successfully')
+    print('✓ IR sensor library imported successfully (globally installed)')
     success_count += 1
 except ImportError as e:
     print('✗ IR sensor library import failed:', e)

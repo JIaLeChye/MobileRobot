@@ -1,0 +1,205 @@
+name: Auto Update Library Versions
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'Libraries/**'
+
+jobs:
+  update-library-versions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+    
+    - name: Setup Git
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "Library Version Bot"
+    
+    - name: Check for library changes and update versions
+      run: |
+        echo "🔍 Checking for library file changes..."
+        
+        # Define library directories
+        LIB_DIRS=(
+          "Libraries/RPi_Robot_Hat_Lib/"
+          "Libraries/Ultrasonic_Sensor/"
+          "Libraries/IR_Sensor/"
+        )
+        
+        # Function to validate SemVer format
+        validate_semver() {
+          local version="$1"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid SemVer format: $version"
+            return 1
+          fi
+          return 0
+        }
+        
+        # Function to increment PATCH version (SemVer compliant)
+        increment_patch() {
+          local version="$1"
+          local major=$(echo "$version" | cut -d. -f1)
+          local minor=$(echo "$version" | cut -d. -f2)
+          local patch=$(echo "$version" | cut -d. -f3)
+          patch=$((patch + 1))
+          echo "${major}.${minor}.${patch}"
+        }
+        
+        # Function to update version in Python file
+        update_python_version() {
+          local file="$1"
+          local new_version="$2"
+          if grep -q 'self\.lib_ver=' "$file"; then
+            sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
+            echo "✅ Updated Python version to $new_version in $file"
+            return 0
+          fi
+          return 1
+        }
+        
+        # Function to update version in setup.py
+        update_setup_version() {
+          local file="$1"
+          local new_version="$2"
+          if grep -q 'version=' "$file"; then
+            sed -i "s/version=\"[^\"]*\"/version=\"${new_version}\"/" "$file"
+            echo "✅ Updated setup.py version to $new_version in $file"
+            return 0
+          fi
+          return 1
+        }
+        
+        # Function to update version in __init__.py
+        update_init_version() {
+          local file="$1"
+          local new_version="$2"
+          if grep -q '__version__' "$file"; then
+            sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
+            echo "✅ Updated __init__.py version to $new_version in $file"
+            return 0
+          fi
+          return 1
+        }
+        
+        # Get changed files in this push
+        changed_files=$(git diff --name-only HEAD~1 HEAD)
+        echo "📝 Changed files:"
+        echo "$changed_files"
+        echo ""
+        
+        # Check if any library files were changed
+        lib_files_changed=false
+        for lib_dir in "${LIB_DIRS[@]}"; do
+          if echo "$changed_files" | grep -q "^${lib_dir}"; then
+            lib_files_changed=true
+            echo "📚 Library files changed in: $lib_dir"
+          fi
+        done
+        
+        if [ "$lib_files_changed" = false ]; then
+          echo "ℹ️  No library files changed, versions remain unchanged"
+          exit 0
+        fi
+        
+        echo ""
+        echo "🔄 SemVer compliant auto-versioning activated..."
+        echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
+        echo ""
+        
+        files_updated=false
+        
+        # Update RPi_Robot_Hat_Lib if changed
+        if echo "$changed_files" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
+          ROBOT_HAT_FILE="Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py"
+          ROBOT_HAT_SETUP="Libraries/RPi_Robot_Hat_Lib/setup.py"
+          ROBOT_HAT_INIT="Libraries/RPi_Robot_Hat_Lib/__init__.py"
+          
+          if [ -f "$ROBOT_HAT_FILE" ]; then
+            # Extract current version
+            current_version=$(grep -o 'self\.lib_ver= "[^"]*"' "$ROBOT_HAT_FILE" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            
+            if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
+              current_version="1.0.0"
+              echo "⚠️  No valid SemVer found in RPi_Robot_Hat_Lib, starting with $current_version"
+            fi
+            
+            new_version=$(increment_patch "$current_version")
+            echo "📈 RPi_Robot_Hat_Lib: $current_version → $new_version (PATCH)"
+            
+            # Update all version locations
+            if update_python_version "$ROBOT_HAT_FILE" "$new_version"; then
+              files_updated=true
+            fi
+            
+            if [ -f "$ROBOT_HAT_SETUP" ]; then
+              update_setup_version "$ROBOT_HAT_SETUP" "$new_version"
+            fi
+            
+            if [ -f "$ROBOT_HAT_INIT" ]; then
+              update_init_version "$ROBOT_HAT_INIT" "$new_version"
+            fi
+            
+            echo "✅ RPi_Robot_Hat_Lib updated to SemVer $new_version"
+            echo ""
+          fi
+        fi
+        
+        # Update other libraries if changed
+        for lib_dir in "Libraries/Ultrasonic_Sensor" "Libraries/IR_Sensor"; do
+          if echo "$changed_files" | grep -q "^${lib_dir}/"; then
+            setup_file="$lib_dir/setup.py"
+            init_file="$lib_dir/__init__.py"
+            
+            if [ -f "$setup_file" ]; then
+              # Extract current version
+              current_version=$(grep -o 'version="[^"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+              
+              if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
+                current_version="1.0.0"
+                echo "⚠️  No valid SemVer found in $(basename "$lib_dir"), starting with $current_version"
+              fi
+              
+              new_version=$(increment_patch "$current_version")
+              lib_name=$(basename "$lib_dir")
+              echo "📈 $lib_name: $current_version → $new_version (PATCH)"
+              
+              # Update versions
+              if update_setup_version "$setup_file" "$new_version"; then
+                files_updated=true
+              fi
+              
+              if [ -f "$init_file" ]; then
+                update_init_version "$init_file" "$new_version"
+              fi
+              
+              echo "✅ $lib_name updated to SemVer $new_version"
+              echo ""
+            fi
+          fi
+        done
+        
+        # Commit version updates if any files were updated
+        if [ "$files_updated" = true ]; then
+          echo "📦 Committing version updates..."
+          git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py
+          git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
+          git push origin HEAD:${{ github.ref_name }}
+          echo "🎉 Library versions updated and committed!"
+        else
+          echo "ℹ️  No version files needed updating"
+        fi
+        
+        echo ""
+        echo "📖 SemVer Reference: https://semver.org/"
+        echo "💡 For MINOR/MAJOR versions, use manual semver_bump.sh script"

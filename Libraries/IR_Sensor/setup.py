@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="ir-sensor-lib",
+    version="1.0.1",
+    description="IR sensor library for obstacle detection", 
+    long_description="A library for controlling infrared sensors on Raspberry Pi robots, providing obstacle detection and proximity sensing capabilities.",
+    long_description_content_type="text/plain",
+    author="JIaLeChye",
+    author_email="jialecjl2016@outlook.com",
+    url="https://github.com/JIaLeChye/MobileRobot",
+    packages=find_packages(),
+    py_modules=["IRSens"],
+    install_requires=[
+        "rpi-lgpio>=0.4",
+    ],
+    python_requires=">=3.7",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education", 
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: System :: Hardware",
+        "Topic :: Education",
+        "Topic :: Scientific/Engineering",
+    ],
+    keywords="raspberry-pi, infrared, sensors, robotics, obstacle-detection",
+)

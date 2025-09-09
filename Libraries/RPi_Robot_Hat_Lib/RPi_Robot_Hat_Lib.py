@@ -682,4 +682,3 @@ def test():
         print("\nTest completed")
 
 if __name__ == "__main__":
-    test()# Test SemVer pre-commit

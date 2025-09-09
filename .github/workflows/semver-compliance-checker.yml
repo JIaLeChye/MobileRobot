@@ -1,0 +1,226 @@
+name: SemVer Compliance Checker
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  semver-compliance-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: SemVer Compliance Verification
+      run: |
+        echo "🏷️  SemVer Compliance Checker"
+        echo "=============================="
+        echo ""
+        
+        # Function to validate SemVer format
+        validate_semver() {
+          local version="$1"
+          local file="$2"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Valid SemVer: $version in $file"
+            return 0
+          else
+            echo "❌ Invalid SemVer: '$version' in $file"
+            echo "   Must follow MAJOR.MINOR.PATCH format (e.g., 1.2.3)"
+            return 1
+          fi
+        }
+        
+        # Function to check version consistency
+        check_version_consistency() {
+          local lib_name="$1"
+          local python_file="$2"
+          local setup_file="$3"
+          local init_file="$4"
+          
+          echo "🔍 Checking $lib_name version consistency..."
+          
+          local versions=()
+          local files=()
+          
+          # Extract version from Python file
+          if [ -f "$python_file" ]; then
+            python_version=$(grep -o 'self\.lib_ver= "[^"]*"' "$python_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            if [ -n "$python_version" ]; then
+              versions+=("$python_version")
+              files+=("$python_file")
+            fi
+          fi
+          
+          # Extract version from setup.py
+          if [ -f "$setup_file" ]; then
+            setup_version=$(grep -o 'version="[^"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            if [ -n "$setup_version" ]; then
+              versions+=("$setup_version")
+              files+=("$setup_file")
+            fi
+          fi
+          
+          # Extract version from __init__.py
+          if [ -f "$init_file" ]; then
+            init_version=$(grep -o '__version__ = "[^"]*"' "$init_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            if [ -n "$init_version" ]; then
+              versions+=("$init_version")
+              files+=("$init_file")
+            fi
+          fi
+          
+          # Check if all versions are the same
+          if [ ${#versions[@]} -eq 0 ]; then
+            echo "⚠️  No versions found in $lib_name"
+            return 1
+          fi
+          
+          local first_version="${versions[0]}"
+          local consistent=true
+          
+          for i in "${!versions[@]}"; do
+            if [ "${versions[$i]}" != "$first_version" ]; then
+              echo "❌ Version mismatch in $lib_name:"
+              echo "   ${files[$i]}: ${versions[$i]}"
+              echo "   Expected: $first_version"
+              consistent=false
+            fi
+          done
+          
+          if [ "$consistent" = true ]; then
+            echo "✅ Version consistency check passed: $first_version"
+            validate_semver "$first_version" "$lib_name"
+            return $?
+          else
+            return 1
+          fi
+        }
+        
+        # Function to check SemVer progression
+        check_semver_progression() {
+          echo ""
+          echo "📈 Checking SemVer progression rules..."
+          
+          # This would typically compare with previous versions
+          # For now, we'll just validate format
+          echo "ℹ️  SemVer progression validation requires git history analysis"
+          echo "   Current implementation focuses on format validation"
+          echo ""
+        }
+        
+        echo "🔍 Starting SemVer compliance checks..."
+        echo ""
+        
+        overall_status=0
+        
+        # Check RPi_Robot_Hat_Lib
+        echo "📦 RPi_Robot_Hat_Lib"
+        echo "-------------------"
+        if ! check_version_consistency \
+          "RPi_Robot_Hat_Lib" \
+          "Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py" \
+          "Libraries/RPi_Robot_Hat_Lib/setup.py" \
+          "Libraries/RPi_Robot_Hat_Lib/__init__.py"; then
+          overall_status=1
+        fi
+        echo ""
+        
+        # Check Ultrasonic_Sensor
+        echo "📦 Ultrasonic_Sensor"
+        echo "-------------------"
+        if ! check_version_consistency \
+          "Ultrasonic_Sensor" \
+          "Libraries/Ultrasonic_Sensor/Ultrasonic_sens.py" \
+          "Libraries/Ultrasonic_Sensor/setup.py" \
+          "Libraries/Ultrasonic_Sensor/__init__.py"; then
+          overall_status=1
+        fi
+        echo ""
+        
+        # Check IR_Sensor
+        echo "📦 IR_Sensor"
+        echo "------------"
+        if ! check_version_consistency \
+          "IR_Sensor" \
+          "Libraries/IR_Sensor/IRSens.py" \
+          "Libraries/IR_Sensor/setup.py" \
+          "Libraries/IR_Sensor/__init__.py"; then
+          overall_status=1
+        fi
+        echo ""
+        
+        # Additional SemVer checks
+        echo "🔧 Additional SemVer Compliance Checks"
+        echo "======================================"
+        
+        # Check for common SemVer violations
+        echo "🔍 Checking for common SemVer violations..."
+        
+        violation_found=false
+        
+        # Check for invalid version formats in all files
+        if grep -r "version.*v[0-9]" Libraries/ 2>/dev/null; then
+          echo "❌ Found versions with 'v' prefix (not SemVer compliant)"
+          violation_found=true
+        fi
+        
+        if grep -r "version.*[0-9]\+\.[0-9]\+\.[0-9]\+-" Libraries/ 2>/dev/null; then
+          echo "❌ Found pre-release versions (consider separate handling)"
+          violation_found=true
+        fi
+        
+        if grep -r "version.*[0-9]\+\.[0-9]\+\.[0-9]\++[0-9]" Libraries/ 2>/dev/null; then
+          echo "❌ Found build metadata in versions (not recommended)"
+          violation_found=true
+        fi
+        
+        if [ "$violation_found" = false ]; then
+          echo "✅ No common SemVer violations found"
+        else
+          overall_status=1
+        fi
+        
+        echo ""
+        
+        # Summary
+        echo "📋 SemVer Compliance Summary"
+        echo "==========================="
+        if [ $overall_status -eq 0 ]; then
+          echo "🎉 All libraries are SemVer compliant!"
+          echo ""
+          echo "📖 SemVer Guidelines Followed:"
+          echo "   • MAJOR.MINOR.PATCH format"
+          echo "   • Version consistency across files"
+          echo "   • No invalid characters or prefixes"
+          echo ""
+          echo "📚 Libraries checked:"
+          echo "   • RPi_Robot_Hat_Lib"
+          echo "   • Ultrasonic_Sensor"
+          echo "   • IR_Sensor"
+        else
+          echo "❌ SemVer compliance issues found!"
+          echo ""
+          echo "🔧 Required actions:"
+          echo "   • Fix version format violations"
+          echo "   • Ensure version consistency"
+          echo "   • Follow MAJOR.MINOR.PATCH format"
+          echo ""
+          echo "📖 SemVer Reference: https://semver.org/"
+        fi
+        
+        exit $overall_status
+    
+    - name: Post compliance status
+      if: always()
+      run: |
+        if [ $? -eq 0 ]; then
+          echo "✅ SemVer compliance check passed"
+        else
+          echo "❌ SemVer compliance check failed"
+          echo "Please fix the issues above before merging"
+        fi
