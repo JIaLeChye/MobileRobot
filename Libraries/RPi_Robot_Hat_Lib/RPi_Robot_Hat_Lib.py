@@ -43,7 +43,7 @@ class RobotController:
         self.REG_VOLTAGE = 17
         self.REG_ENCODER_RESET = 18
         self.REG_SYSTEM_RESET = 19
-        self.lib_ver= "1.2.2"
+        self.lib_ver= "1.2.5"
 
     def __version__(self):
         """Return the library version"""
@@ -682,4 +682,4 @@ def test():
         print("\nTest completed")
 
 if __name__ == "__main__":
-    test()
+    test()# Test SemVer pre-commit
