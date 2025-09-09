@@ -20,7 +20,11 @@ Example usage:
 from .RPi_Robot_Hat_Lib import RobotController
 from .Encoder import *  # If Encoder module exists
 
-__version__ = "1.2.6"
+Author: JIaLeChye
+GitHub: https://github.com/JIaLeChye/MobileRobot
+"""
+
+__version__ = "1.2.7"
 __author__ = "JIaLeChye"
 __email__ = "jialecjl2016@outlook.com"
 __license__ = "MIT"

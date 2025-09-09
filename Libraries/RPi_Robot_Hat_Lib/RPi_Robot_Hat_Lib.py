@@ -43,7 +43,7 @@ class RobotController:
         self.REG_VOLTAGE = 17
         self.REG_ENCODER_RESET = 18
         self.REG_SYSTEM_RESET = 19
-        self.lib_ver= "1.2.6"
+        self.lib_ver= "1.2.7"
 
     def __version__(self):
         """Return the library version"""
