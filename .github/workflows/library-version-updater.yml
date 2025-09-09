@@ -19,15 +19,25 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
         persist-credentials: true
+        ref: ${{ github.head_ref || github.ref }}
     
     - name: Setup Git
       run: |
         git config --global user.email "action@github.com"
         git config --global user.name "Library Version Bot"
+        git config --global pull.rebase false
+        echo "🔧 Git configuration complete"
     
     - name: Check for library changes and update versions
       run: |
         echo "🔍 Checking for library file changes..."
+        
+        # Check if this commit was made by the version bot (avoid infinite loops)
+        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+        if [[ "$COMMIT_MESSAGE" == *"Auto-update library versions"* ]]; then
+          echo "🛑 This commit was made by version bot, skipping to avoid infinite loop"
+          exit 0
+        fi
         
         # Define library directories
         LIB_DIRS=(
@@ -90,6 +100,63 @@ jobs:
             return 0
           fi
           return 1
+        }
+        
+        # Robust push function with conflict resolution
+        robust_push() {
+          local max_attempts=5
+          local attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "🚀 Push attempt $attempt/$max_attempts..."
+            
+            # Fetch latest changes
+            git fetch origin ${{ github.ref_name }}
+            
+            # Check if we're behind
+            LOCAL=$(git rev-parse HEAD)
+            REMOTE=$(git rev-parse origin/${{ github.ref_name }})
+            
+            if [ "$LOCAL" != "$REMOTE" ]; then
+              echo "⚠️  Remote has new commits, rebasing..."
+              
+              # Stash our changes if any
+              git stash push -m "Auto-version update stash" || true
+              
+              # Pull with rebase
+              git pull --rebase origin ${{ github.ref_name }}
+              
+              # Apply our stashed changes
+              git stash pop || true
+              
+              # Re-add files in case of conflicts
+              git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py 2>/dev/null || true
+              
+              # Commit again if needed
+              if ! git diff --cached --quiet; then
+                git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
+              fi
+            fi
+            
+            # Try to push
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "✅ Successfully pushed on attempt $attempt"
+              return 0
+            else
+              echo "❌ Push failed on attempt $attempt"
+              if [ $attempt -eq $max_attempts ]; then
+                echo "💥 Failed to push after $max_attempts attempts"
+                return 1
+              fi
+              
+              # Wait before retry with exponential backoff
+              sleep_time=$((2 ** attempt))
+              echo "⏳ Waiting ${sleep_time}s before retry..."
+              sleep $sleep_time
+            fi
+            
+            attempt=$((attempt + 1))
+          done
         }
         
         # Get changed files in this push
@@ -194,8 +261,15 @@ jobs:
           echo "📦 Committing version updates..."
           git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py
           git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
-          git push origin HEAD:${{ github.ref_name }}
-          echo "🎉 Library versions updated and committed!"
+          
+          # Use robust push with conflict resolution
+          if robust_push; then
+            echo "🎉 Library versions updated and committed successfully!"
+          else
+            echo "💥 Failed to push version updates after multiple attempts"
+            echo "ℹ️  This might be due to concurrent pushes, but versions were updated locally"
+            exit 1
+          fi
         else
           echo "ℹ️  No version files needed updating"
         fi
