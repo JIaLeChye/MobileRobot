@@ -1,10 +1,12 @@
 name: Auto Release
 
+# This workflow controls version.py and creates project releases
+# It ONLY runs when commit messages contain "release" keyword
+# Library versions are handled by library-version-updater.yml
+
 on:
   push:
     branches: [ master, main ]
-    # Only run for non-bot commits and exclude version update commits
-    # to prevent conflicts with library-version-updater workflow
 
 jobs:
   auto-release:
@@ -36,15 +38,22 @@ jobs:
           exit 0
         fi
         
-        # Skip if commit message indicates it's a version/release commit
-        if [[ "$COMMIT_MESSAGE" == *"🚀 Release"* ]] || [[ "$COMMIT_MESSAGE" == *"🔖 Auto-update"* ]] || [[ "$COMMIT_MESSAGE" == *"version"* ]]; then
+        # Skip if commit message indicates it's already a version/release commit
+        if [[ "$COMMIT_MESSAGE" == *"🚀 Release"* ]] || [[ "$COMMIT_MESSAGE" == *"🔖 Auto-update"* ]]; then
           echo "🛑 Skipping: Commit is already a version/release commit"
           echo "should_run=false" >> $GITHUB_OUTPUT
           exit 0
         fi
         
-        echo "✅ Should run release workflow"
-        echo "should_run=true" >> $GITHUB_OUTPUT
+        # ONLY RUN if commit message contains release keywords
+        if [[ "$COMMIT_MESSAGE" == *"release"* ]] || [[ "$COMMIT_MESSAGE" == *"Release"* ]] || [[ "$COMMIT_MESSAGE" == *"RELEASE"* ]]; then
+          echo "🚀 Release keyword detected in commit message"
+          echo "should_run=true" >> $GITHUB_OUTPUT
+        else
+          echo "ℹ️  No release keyword found in commit message"
+          echo "💡 Use 'release' in your commit message to trigger a release"
+          echo "should_run=false" >> $GITHUB_OUTPUT
+        fi
     
     - name: Auto increment version and create release
       if: steps.should_run.outputs.should_run == 'true'
