@@ -19,7 +19,7 @@ Example usage:
 
 from .IRSens import IRsens
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "JIaLeChye"
 __email__ = "jialecjl2016@outlook.com"
 __license__ = "MIT"

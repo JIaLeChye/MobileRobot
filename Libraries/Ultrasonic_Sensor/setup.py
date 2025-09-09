@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ultrasonic-sensor-lib",
-    version="1.0.1", 
+    version="1.0.2", 
     description="Ultrasonic sensor library for robot navigation",
     long_description="A library for controlling ultrasonic sensors on Raspberry Pi robots, providing distance measurement and obstacle detection capabilities.",
     long_description_content_type="text/plain",
