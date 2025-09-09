@@ -4,7 +4,11 @@ on:
   push:
     branches: [ master, main ]
     paths:
-      - 'Libraries/**'
+      - 'Libraries/**/*.py'
+      - 'Libraries/**/setup.py'
+      - 'Libraries/**/__init__.py'
+      - '!Libraries/**/__pycache__/**'
+      - '!Libraries/**/*.egg-info/**'
 
 jobs:
   update-library-versions:
@@ -30,21 +34,57 @@ jobs:
     
     - name: Check for library changes and update versions
       run: |
-        echo "🔍 Checking for library file changes..."
+        echo "🔍 Checking for meaningful library file changes..."
         
-        # Check if this commit was made by the version bot (avoid infinite loops)
+        # Check if this commit was made by any bot (avoid infinite loops)
         COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-        if [[ "$COMMIT_MESSAGE" == *"Auto-update library versions"* ]]; then
-          echo "🛑 This commit was made by version bot, skipping to avoid infinite loop"
+        COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+        
+        if [[ "$COMMIT_MESSAGE" == *"Auto-update library versions"* ]] || [[ "$COMMIT_AUTHOR" == *"Bot"* ]]; then
+          echo "🛑 This commit was made by a bot, skipping to avoid infinite loop"
           exit 0
         fi
         
-        # Define library directories
+        # Define library directories with specific files that matter for versioning
         LIB_DIRS=(
           "Libraries/RPi_Robot_Hat_Lib/"
           "Libraries/Ultrasonic_Sensor/"
           "Libraries/IR_Sensor/"
         )
+        
+        # Get changed files - only look at actual library source files
+        changed_files=$(git diff --name-only HEAD~1 HEAD | grep -E "\.(py)$" | grep "Libraries/" || true)
+        
+        # Filter out non-essential files
+        meaningful_changes=$(echo "$changed_files" | grep -v "__pycache__" | grep -v ".egg-info" | grep -v ".pyc" || true)
+        
+        echo "📝 All changed files:"
+        git diff --name-only HEAD~1 HEAD
+        echo ""
+        echo "📚 Library files changed:"
+        echo "$meaningful_changes"
+        echo ""
+        
+        # Check if any meaningful library files were changed
+        if [ -z "$meaningful_changes" ]; then
+          echo "ℹ️  No meaningful library files changed, versions remain unchanged"
+          echo "💡 Only Python files (.py) in Libraries/ directories trigger version updates"
+          exit 0
+        fi
+        
+        lib_files_changed=false
+        for lib_dir in "${LIB_DIRS[@]}"; do
+          if echo "$meaningful_changes" | grep -q "^${lib_dir}"; then
+            lib_files_changed=true
+            echo "📚 Meaningful library changes detected in: $lib_dir"
+          fi
+        done
+        
+        if [ "$lib_files_changed" = false ]; then
+          echo "ℹ️  Changed files are not in monitored library directories"
+          echo "📁 Monitored directories: ${LIB_DIRS[*]}"
+          exit 0
+        fi
         
         # Function to validate SemVer format
         validate_semver() {
@@ -157,45 +197,15 @@ jobs:
             
             attempt=$((attempt + 1))
           done
-        }
-        
-        # Get changed files in this push - look at original commit, not release commits
-        changed_files=$(git diff --name-only HEAD~1 HEAD)
-        
-        # If the only change is version.py, look at the previous commit instead
-        # This handles the case where auto-version.yml ran first
-        if [ "$changed_files" = "version.py" ] || [ "$changed_files" = "README.md" ] || [[ "$changed_files" == *"version.py"* && "$changed_files" == *"README.md"* ]]; then
-          echo "🔍 Detected release commit, checking previous commit for library changes..."
-          changed_files=$(git diff --name-only HEAD~2 HEAD~1)
-        fi
-        
-        echo "📝 Changed files:"
-        echo "$changed_files"
         echo ""
-        
-        # Check if any library files were changed
-        lib_files_changed=false
-        for lib_dir in "${LIB_DIRS[@]}"; do
-          if echo "$changed_files" | grep -q "^${lib_dir}"; then
-            lib_files_changed=true
-            echo "📚 Library files changed in: $lib_dir"
-          fi
-        done
-        
-        if [ "$lib_files_changed" = false ]; then
-          echo "ℹ️  No library files changed, versions remain unchanged"
-          exit 0
-        fi
-        
-        echo ""
-        echo "🔄 SemVer compliant auto-versioning activated..."
+        echo " SemVer compliant auto-versioning activated..."
         echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
         echo ""
         
         files_updated=false
         
         # Update RPi_Robot_Hat_Lib if changed
-        if echo "$changed_files" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
+        if echo "$meaningful_changes" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
           ROBOT_HAT_FILE="Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py"
           ROBOT_HAT_SETUP="Libraries/RPi_Robot_Hat_Lib/setup.py"
           ROBOT_HAT_INIT="Libraries/RPi_Robot_Hat_Lib/__init__.py"
@@ -232,7 +242,7 @@ jobs:
         
         # Update other libraries if changed
         for lib_dir in "Libraries/Ultrasonic_Sensor" "Libraries/IR_Sensor"; do
-          if echo "$changed_files" | grep -q "^${lib_dir}/"; then
+          if echo "$meaningful_changes" | grep -q "^${lib_dir}/"; then
             setup_file="$lib_dir/setup.py"
             init_file="$lib_dir/__init__.py"
             
