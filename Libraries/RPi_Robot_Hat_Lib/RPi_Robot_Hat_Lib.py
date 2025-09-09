@@ -418,73 +418,7 @@ class RobotController:
         
         # Return final distance achieved
         return final_avg_distance
-    
-    def move_distance_simple(self, distance_cm, speed=30):
-        """Simple movement function using only front encoders for better accuracy"""
-        print(f"\nMoving {distance_cm}cm at speed {speed}")
-        
-        target_distance = abs(distance_cm) / 100.0  # Convert to meters
-        direction = 1 if distance_cm >= 0 else -1
-        
-        # Reset encoders
-        self.reset_encoders()
-        time.sleep(0.2)
-        
-        # Get initial readings (use only front encoders)
-        initial_left = self.get_encoder('LF')
-        initial_right = self.get_encoder('RF')
-        
-        # Start moving
-        if direction > 0:
-            self.Forward(speed)
-        else:
-            self.Backward(speed)
-        
-        while True:
-            # Get current readings
-            current_left = self.get_encoder('LF')
-            current_right = self.get_encoder('RF')
-            
-            # Calculate distances
-            left_ticks = abs(current_left - initial_left)
-            right_ticks = abs(current_right - initial_right)
-            
-            left_distance = self.ticks_to_distance(left_ticks) / 1000.0
-            right_distance = self.ticks_to_distance(right_ticks) / 1000.0
-            
-            # Average of front wheels only
-            avg_distance = (left_distance + right_distance) / 2
-            
-            print(f"Progress: {avg_distance*100:.1f}cm / {distance_cm:.1f}cm")
-            
-            # Stop before target to account for momentum
-            stop_threshold = target_distance * 0.95  # Stop at 95% of target
-            
-            if avg_distance >= stop_threshold:
-                print("Approaching target, stopping...")
-                break
-            
-            time.sleep(0.1)
-        
-        self.stop()
-        time.sleep(0.3)  # Wait for complete stop
-        
-        # Final measurement
-        final_left = self.get_encoder('LF')
-        final_right = self.get_encoder('RF')
-        
-        final_left_ticks = abs(final_left - initial_left)
-        final_right_ticks = abs(final_right - initial_right)
-        
-        final_left_distance = self.ticks_to_distance(final_left_ticks) / 1000.0
-        final_right_distance = self.ticks_to_distance(final_right_ticks) / 1000.0
-        final_avg = (final_left_distance + final_right_distance) / 2
-        
-        print(f"Final distance: {final_avg*100:.1f}cm")
-        print(f"Left wheel: {final_left_distance*100:.1f}cm, Right wheel: {final_right_distance*100:.1f}cm")
-        
-        return final_avg * 100  # Return in cm
-    #################################################
+    ##########################################
 
     
 
