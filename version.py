@@ -3,7 +3,7 @@ MobileRobot Version Information
 This file is automatically updated by GitHub Actions.
 """
 
-__version__ = "2.0.6"
+__version__ = "2.0.7"
 __author__ = "JiaLeChye"
 __description__ = "Mobile Robot Control System for Raspberry Pi"
 __url__ = "https://github.com/JIaLeChye/MobileRobot"
