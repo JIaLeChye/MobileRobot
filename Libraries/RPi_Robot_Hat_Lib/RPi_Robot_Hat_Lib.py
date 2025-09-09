@@ -43,10 +43,12 @@ class RobotController:
         self.REG_VOLTAGE = 17
         self.REG_ENCODER_RESET = 18
         self.REG_SYSTEM_RESET = 19
-        self.lib_ver= "1.0.0"
+        self.lib_ver= "1.2.2"
 
     def __version__(self):
+        """Return the library version"""
         print(f"RPi_Robot_Hat_Lib Version: {self.lib_ver}")
+        return self.lib_ver
 
 
     ##-- Communication section----##
@@ -294,16 +296,6 @@ class RobotController:
             print(f"Error converting ticks to distance: {e}")
             return 0
     
-    def reset_encoders(self):
-        """Reset all encoder values to zero"""
-        try:
-            self._write_byte(self.REG_ENCODER_RESET, 1)
-            time.sleep(0.1)  # Give time for reset to complete
-            if self.debug:
-                print("Encoders reset successfully")
-        except Exception as e:
-            print(f"Error resetting encoders: {e}")
-    
     def get_all_encoders(self):
         """Get all encoder values at once"""
         return {
@@ -360,13 +352,19 @@ class RobotController:
                 distances = {}
                 valid_motors = []
                 
-                for motor in ['LF', 'RF', 'RB']:  # Exclude LB due to encoder issues
+                for motor in ['LF', 'RF', 'RB', 'LB']:  # Include all motors
                     delta_ticks = abs(current_encoders[motor] - initial_encoders[motor])
                     distances[motor] = self.ticks_to_distance(delta_ticks) / 1000.0  # Convert to meters
                     
+                    # Debug: Print individual distances
+                    if self.debug:
+                        print(f"DEBUG: {motor} distance: {distances[motor]*1000:.1f}mm")
+                    
                     # Only include motors with reasonable readings
-                    if distances[motor] < 1.0:  # Less than 1 meter (sanity check)
+                    if distances[motor] < 5.0:  # Less than 5 meters (relaxed sanity check)
                         valid_motors.append(motor)
+                    elif self.debug:
+                        print(f"DEBUG: {motor} excluded - distance too large: {distances[motor]*1000:.1f}mm")
                 
                 # Calculate average distance using only valid encoders
                 if len(valid_motors) >= 2:
