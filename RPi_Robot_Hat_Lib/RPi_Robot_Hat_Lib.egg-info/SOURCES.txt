@@ -1,7 +1,0 @@
-RPi_Robot_Hat_Lib.py
-setup.py
-RPi_Robot_Hat_Lib.egg-info/PKG-INFO
-RPi_Robot_Hat_Lib.egg-info/SOURCES.txt
-RPi_Robot_Hat_Lib.egg-info/dependency_links.txt
-RPi_Robot_Hat_Lib.egg-info/requires.txt
-RPi_Robot_Hat_Lib.egg-info/top_level.txt

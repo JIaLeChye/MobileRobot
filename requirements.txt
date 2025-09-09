@@ -1,3 +1,11 @@
+# Unified requirements for MobileRobot.
+# This file contains both runtime and development dependencies.
+# For production deployment, you can skip the development section.
+
+# ============================================================================
+# RUNTIME DEPENDENCIES (Required for robot operation)
+# ============================================================================
+
 # Core libraries for Mobile Robot
 rpi-lgpio>=0.6              # Modern GPIO library for Raspberry Pi 5
 adafruit-circuitpython-ssd1306  # OLED display
@@ -7,10 +15,13 @@ numpy                        # Numerical computing
 opencv-contrib-python        # Computer vision (includes basic OpenCV)
 Pillow                       # Image processing
 picamera2                    # Raspberry Pi camera (if not system-installed)
+Adafruit_Blinka==8.54.0
+smbus==1.1.post2
 
 # TensorFlow Lite and Machine Learning
 tflite-runtime              # TensorFlow Lite runtime for object detection
 mediapipe                   # Google's ML framework for hand gesture recognition
+tensorflow==2.18.0
 
 # Computer Vision and Recognition
 apriltag                    # April Tag detection and recognition
@@ -20,3 +31,32 @@ git+https://github.com/vshymanskyy/blynk-library-python.git  # Mobile app remote
 
 # Additional Adafruit CircuitPython dependencies
 adafruit-circuitpython-busdevice  # I2C/SPI device support
+
+# ============================================================================
+# DEVELOPMENT DEPENDENCIES (Optional - for development and testing)
+# ============================================================================
+
+# Testing frameworks
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Code quality tools
+black>=22.0.0
+flake8>=5.0.0
+isort>=5.10.0
+mypy>=1.0.0
+
+# Documentation tools
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.2.0
+myst-parser>=0.18.0
+
+# Development tools
+pre-commit>=2.20.0
+tox>=4.0.0
+twine>=4.0.0
+
+# Hardware simulation (for testing without physical hardware)
+mock>=4.0.0
+unittest-mock>=1.0.0
