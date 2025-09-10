@@ -318,6 +318,7 @@ class RobotController:
         direction = 1 if distance >= 0 else -1
         speed = abs(speed) * direction  # Ensure speed direction matches distance direction
         target_distance = abs(distance)
+        valid_motors = []
         
         # Reset encoders for accurate measurement
         self.reset_encoders()
@@ -576,41 +577,14 @@ class RobotController:
             except Exception as e:
                 print(f"Warning: GPIO cleanup error: {e}")
 
-
-
-def test():
-    """Simple test function"""
-    robot = RobotController(wheel_diameter=97)
-    # 使用默认校准因子，不覆盖
-    
+if __name__ == "__main__":
+    robot = RobotController(debug=True)
+    robot.__version__()
     try:
-        # Test battery voltage
-        voltage = robot.get_battery()
-        print(f"Battery Voltage: {voltage:.1f}V")
         
-        # Test servos
-        print("\nCentering servos...")
-        robot.set_servo(1, 90)
-        robot.set_servo(2, 90)
-        time.sleep(1)
-        
-        # Test movement
-        print("\nMoving forward...")
-        robot.Forward(50)
-        time.sleep(2)
-        robot.stop()
-        
-        # Test line sensors
-        print("\nReading line sensors...")
-        digital = robot.read_line_sensors()
-        analog = robot.read_line_analog()
-        print(f"Digital sensors: {bin(digital)[2:]:>05}")
-        print(f"Analog value: {analog}")
-        
+        robot.move_distance(1.0, speed=40)  # Move forward 1 meter at speed 40
     except KeyboardInterrupt:
-        print("\nTest interrupted by user")
+        print("Interrupted by user")
     finally:
         robot.cleanup()
-        print("\nTest completed")
-
-if __name__ == "__main__":
+        print("Cleanup done")
