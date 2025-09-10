@@ -10,8 +10,6 @@ class RobotController:
         self.address = 0x09
         self.bus = smbus.SMBus(1)
 
-    
-
         self.debug = debug 
         self.rpm_init = False 
         

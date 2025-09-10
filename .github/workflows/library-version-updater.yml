@@ -197,12 +197,13 @@ jobs:
             
             attempt=$((attempt + 1))
           done
-        echo ""
-        echo " SemVer compliant auto-versioning activated..."
-        echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
-        echo ""
+  echo ""
+  echo " SemVer compliant auto-versioning activated..."
+  echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
+  echo ""
+  }
         
-        files_updated=false
+  files_updated=false
         
         # Update RPi_Robot_Hat_Lib if changed
         if echo "$meaningful_changes" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
