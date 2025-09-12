@@ -3,7 +3,7 @@
 # Variables
 
 USER_NAME=$(whoami)
-USER_HOME="$HOME"
+USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
 SERVICE_NAME="battery.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
