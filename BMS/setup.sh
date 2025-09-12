@@ -1,11 +1,18 @@
 #!/bin/bash
 
 # Variables
+
 USER_NAME=$(whoami)
 USER_HOME="$HOME"
 SERVICE_NAME="battery.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
-BATTERY_SCRIPT=$(find "$USER_HOME/Desktop" -name "Battery.py" -print -quit)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 先在当前脚本目录查找 Battery.py
+BATTERY_SCRIPT=$(find "$SCRIPT_DIR" -maxdepth 2 -name "Battery.py" -print -quit)
+# 如果没找到，再全局搜索
+if [ -z "$BATTERY_SCRIPT" ]; then
+    BATTERY_SCRIPT=$(find / -name "Battery.py" 2>/dev/null | head -n 1)
+fi
 STANDARD_OUTPUT="Battery_log.txt" 
 STANDARD_ERROR_OUTPUT="Battery_error_log.txt" 
 LOG_FILE_PATH="$USER_HOME/Battery_Log" 
