@@ -15,7 +15,7 @@ if [ -z "$BATTERY_SCRIPT" ]; then
 fi
 STANDARD_OUTPUT="Battery_log.txt" 
 STANDARD_ERROR_OUTPUT="Battery_error_log.txt" 
-LOG_FILE_PATH="$USER_HOME/Battery_Log" 
+LOG_FILE_PATH="$USER_HOME/Desktop/Battery_Log" 
 
 echo "User Directory is $USER_HOME"
 
