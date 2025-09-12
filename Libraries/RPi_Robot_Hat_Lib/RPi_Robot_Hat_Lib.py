@@ -591,7 +591,7 @@ if __name__ == "__main__":
     robot = RobotController(debug=True)
     robot.__version__()
     try:
-        
+        robot.play_tone(440, 1)  # Play A4 for 1 second
         robot.move_distance(1.0, speed=40)  # Move forward 1 meter at speed 40
     except KeyboardInterrupt:
         print("Interrupted by user")
