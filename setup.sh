@@ -81,15 +81,20 @@ success_pkgs=()
 fail_pkgs=()
 if [ -f "requirements.txt" ]; then
     while IFS= read -r pkg || [ -n "$pkg" ]; do
-        # Skip empty lines and comments
+        # Skip empty lines and full-line comments
         if [ -z "$pkg" ] || echo "$pkg" | grep -Eq '^\s*#'; then
             continue
         fi
-        echo "  -> $pkg"
-        if sudo pip3 install $pkg; then
-            success_pkgs+=("$pkg")
+        # Remove inline comments and trim whitespace/CRLF
+        clean_pkg=$(echo "$pkg" | cut -d'#' -f1 | tr -d '\r' | xargs)
+        if [ -z "$clean_pkg" ]; then
+            continue
+        fi
+        echo "  -> $clean_pkg"
+        if sudo pip3 install "$clean_pkg"; then
+            success_pkgs+=("$clean_pkg")
         else
-            fail_pkgs+=("$pkg")
+            fail_pkgs+=("$clean_pkg")
         fi
     done < requirements.txt
 else
