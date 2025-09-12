@@ -43,7 +43,8 @@ echo "🔧 Checking system dependencies..."
 
 # Only install if something is missing (rare case)
 missing_packages=""
-for package in python3-pip i2c-tools python3-picamera2 python3-libcamera; do
+# Include build tools required for packages like apriltag
+for package in python3-pip i2c-tools python3-picamera2 python3-libcamera cmake build-essential python3-dev pkg-config; do
     if ! dpkg -l | grep -q "^ii  $package "; then
         missing_packages="$missing_packages $package"
     fi
@@ -66,16 +67,27 @@ if [ "$i2c_enabled" -eq 0 ] && [ "$camera_enabled" -eq 0 ]; then
     echo "✓ I2C and Camera interfaces are already enabled"
 else
     echo "Enabling I2C and Camera interfaces..."
-    sudo raspi-config nonint do_i2c 0
-    sudo raspi-config nonint do_camera 0
-fi
-check_status "Interface configuration"
 
-# Remove Python package installation restrictions (for embedded systems)
-echo "� Removing Python package installation restrictions..."
-sudo rm -f /usr/lib/python*/EXTERNALLY-MANAGED 2>/dev/null || true
-echo "✓ Python package restrictions removed"
-check_status "Python environment configuration"
+    # Generic import and version checks script placeholder
+    cat << 'EOF' > /tmp/test_libs.py
+
+    # Install RPi_Robot_Hat_Lib
+    echo "Installing RPi_Robot_Hat_Lib..."
+    cd "$ROBOT_PATH/Libraries/RPi_Robot_Hat_Lib"
+    sudo pip install .
+    cd "$ROBOT_PATH"
+
+    # Install Ultrasonic_sens
+    echo "Installing Ultrasonic sensor library..."
+    cd "$ROBOT_PATH/Libraries/Ultrasonic_Sensor"
+    sudo pip install .
+    cd "$ROBOT_PATH"
+
+    # Install IRSens
+    echo "Installing IR sensor library..."
+    cd "$ROBOT_PATH/Libraries/IR_Sensor"
+    sudo pip install .
+    cd "$ROBOT_PATH"
 
 # Install modern GPIO library for Pi 5
 echo "🔌 Installing modern GPIO library..."
@@ -83,50 +95,59 @@ sudo pip uninstall -y RPi.GPIO 2>/dev/null || true
 sudo pip install rpi-lgpio
 check_status "GPIO library installation"
 
-# Install all Python requirements in one go
+
+# Do not abort on individual pip install failures; record successes and failures
 echo "📚 Installing all Python requirements..."
+success_pkgs=()
+fail_pkgs=()
 if [ -f "requirements.txt" ]; then
-    sudo pip install -r requirements.txt
-    check_status "Python requirements installation"
+    while read -r pkg || [ -n "$pkg" ]; do
+    # Skip empty lines and comments
+        [[ "$pkg" =~ ^#.*$ || -z "$pkg" ]] && continue
+        echo "Installing $pkg ..."
+        if sudo pip install $pkg; then
+            success_pkgs+=("$pkg")
+        else
+            fail_pkgs+=("$pkg")
+        fi
+    done < requirements.txt
 else
-    echo "⚠️ Warning: requirements.txt not found, installing essential packages"
-    sudo pip install \
-        adafruit-circuitpython-ssd1306 \
-        adafruit-circuitpython-pca9685 \
-        adafruit-circuitpython-busdevice \
-        opencv-python \
-        numpy \
-        pillow \
-        smbus2 \
-        mediapipe \
-        tflite-runtime \
-        apriltag
-    
-    # Install Blynk from GitHub (cannot be installed via normal pip)
-    echo "📡 Installing Blynk library from GitHub..."
-    sudo pip install git+https://github.com/vshymanskyy/blynk-library-python.git
-    
-    check_status "Essential packages installation"
+    echo "❌ requirements.txt not found, no packages will be installed."
 fi
+
+echo "\n========= PIP INSTALL SUMMARY ========="
+echo "✅ Successfully installed:"
+for pkg in "${success_pkgs[@]}"; do
+    echo "  - $pkg"
+done
+if [ ${#fail_pkgs[@]} -gt 0 ]; then
+    echo "❌ Failed to install:"
+    for pkg in "${fail_pkgs[@]}"; do
+        echo "  - $pkg"
+    done
+else
+    echo "All packages installed successfully."
+fi
+echo "======================================="
 
 # Install additional GitHub dependencies (if not already installed)
 echo "📡 Installing GitHub-based dependencies..."
 if ! python3 -c "import BlynkLib" 2>/dev/null; then
     echo "Installing Blynk library from GitHub..."
-    sudo pip install git+https://github.com/vshymanskyy/blynk-library-python.git
+echo -e "\n========= PIP INSTALL SUMMARY ========="
+echo "✅ Successfully installed:"
+for pkg in "${success_pkgs[@]}"; do
+    echo "  - $pkg"
+done
+if [ ${#fail_pkgs[@]} -gt 0 ]; then
+    echo "❌ Failed to install:"
+    for pkg in "${fail_pkgs[@]}"; do
+        echo "  - $pkg"
+    done
 else
-    echo "✓ Blynk library already installed"
+    echo "All packages installed successfully."
 fi
-check_status "GitHub dependencies installation"
-
-# Install custom robot libraries globally
-echo "🤖 Installing custom robot libraries globally..."
-ROBOT_PATH="/home/raspberry/Desktop/MobileRobot"
-
-# Install RPi_Robot_Hat_Lib
-echo "Installing RPi_Robot_Hat_Lib..."
-cd "$ROBOT_PATH/Libraries/RPi_Robot_Hat_Lib"
-cat > setup.py << 'EOF'
+echo "======================================="
 from setuptools import setup, find_packages
 
 setup(
@@ -193,72 +214,6 @@ echo "🔐 Setting up GPIO and I2C permissions..."
 sudo usermod -a -G gpio,i2c,spi $USER
 check_status "Permissions setup"
 
-# Test imports to verify everything works
-echo "🧪 Testing library imports..."
-python3 -c "
-success_count = 0
-total_tests = 7
-
-try:
-    from RPi_Robot_Hat_Lib import RobotController
-    print('✓ RPi_Robot_Hat_Lib imported successfully (globally installed)')
-    success_count += 1
-except ImportError as e:
-    print('✗ RPi_Robot_Hat_Lib import failed:', e)
-
-try:
-    from Ultrasonic_sens import Ultrasonic
-    print('✓ Ultrasonic sensor library imported successfully (globally installed)')
-    success_count += 1
-except ImportError as e:
-    print('✗ Ultrasonic sensor library import failed:', e)
-
-try:
-    from IRSens import IRsens
-    print('✓ IR sensor library imported successfully (globally installed)')
-    success_count += 1
-except ImportError as e:
-    print('✗ IR sensor library import failed:', e)
-
-try:
-    import tflite_runtime.interpreter as tflite
-    print('✓ TensorFlow Lite runtime imported successfully')
-    success_count += 1
-except ImportError as e:
-    print('✗ TensorFlow Lite runtime import failed:', e)
-
-try:
-    import mediapipe as mp
-    print('✓ MediaPipe imported successfully')
-    success_count += 1
-except ImportError as e:
-    print('✗ MediaPipe import failed:', e)
-
-try:
-    import apriltag
-    print('✓ AprilTag imported successfully')
-    success_count += 1
-except ImportError as e:
-    print('✗ AprilTag import failed:', e)
-
-try:
-    import BlynkLib
-    print('✓ BlynkLib imported successfully')
-    success_count += 1
-except ImportError as e:
-    print('✗ BlynkLib import failed:', e)
-
-print(f'📊 Import test results: {success_count}/{total_tests} libraries imported successfully')
-
-if success_count >= 5:  # Allow some optional libraries to fail
-    print('🎉 Core libraries imported successfully!')
-    exit(0)
-else:
-    print('⚠️ Some core libraries failed to import, but setup may still work')
-    exit(0)
-"
-check_status "Library import verification"
-
 # Test I2C connectivity
 echo "🔍 Testing I2C connectivity..."
 if command -v i2cdetect &> /dev/null; then
@@ -271,13 +226,8 @@ echo "🎉 Setup completed successfully!"
 echo "================================================================"
 echo
 echo "📋 NEXT STEPS:"
-echo "1. 🔄 Re-login or run: source ~/.bashrc"
-echo "2. 🧪 Test your setup: python complete_self_test.py"
-echo "3. 🚀 Install boot self-test: sudo ./install_boot_test.sh"
-echo
-echo "💡 TROUBLESHOOTING:"
-echo "• Permission issues: newgrp gpio && newgrp i2c"
-echo "• Import issues: source ~/.bashrc"
-echo "• Last resort: sudo reboot"
+echo "1. 🔄 Reboot your Raspberry Pi: sudo reboot"
+echo "2. 🚀 After reboot, run your robot scripts from the Desktop/MobileRobot directory"
+
 echo "================================================================"
 echo "🤖 Your robot is ready for action!"

@@ -7,9 +7,9 @@ USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 2>/dev/null || echo "$HOME"
 SERVICE_NAME="battery.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# 先在当前脚本目录查找 Battery.py
+# Search for Battery.py in current script directory first
 BATTERY_SCRIPT=$(find "$SCRIPT_DIR" -maxdepth 2 -name "Battery.py" -print -quit)
-# 如果没找到，再全局搜索
+# If not found, do a full system search (slow)
 if [ -z "$BATTERY_SCRIPT" ]; then
     BATTERY_SCRIPT=$(find / -name "Battery.py" 2>/dev/null | head -n 1)
 fi

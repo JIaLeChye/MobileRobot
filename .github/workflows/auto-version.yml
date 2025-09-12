@@ -101,7 +101,7 @@ jobs:
             fi
           done
         else
-          # 普通 commit 时自动同步 README 版本徽章
+          # On non-release commits, auto-sync README version badge to version.py
           if [[ "$CUR_VERSION" != "$README_VERSION" ]]; then
             echo "Syncing README.md badge to version.py: $CUR_VERSION"
             sed -i "s/version-$README_VERSION-blue/version-$CUR_VERSION-blue/" README.md

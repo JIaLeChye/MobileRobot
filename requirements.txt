@@ -9,7 +9,6 @@
 # Core libraries for Mobile Robot
 rpi-lgpio>=0.6              # Modern GPIO library for Raspberry Pi 5
 adafruit-circuitpython-ssd1306  # OLED display
-adafruit-circuitpython-pca9685  # Servo/motor control
 smbus2                       # I2C communication
 numpy                        # Numerical computing
 opencv-contrib-python        # Computer vision (includes basic OpenCV)

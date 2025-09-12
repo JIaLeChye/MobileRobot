@@ -19,7 +19,7 @@ class RobotController:
         self.GEAR_RATIO = 30
         self.ENCODER_PPR = 13
         self.TICKS_PER_REV = self.ENCODER_PPR * self.GEAR_RATIO
-        self.calibration_factor = 0.0157  # 校准后的因子
+        self.calibration_factor = 0.0157  # Calibration factor
         
         # Register addresses
         self.REG_MOTOR_RF = 1

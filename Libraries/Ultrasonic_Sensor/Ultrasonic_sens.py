@@ -7,7 +7,7 @@ class Ultrasonic:
     Each sensor uses a single pin for both trigger and echo.
     """
     __init_check = False 
-    SOUND_SPEED = 34300  # Speed of sound in cm/s at 20°C
+    SOUND_SPEED = 34300  # Speed of sound in cm/s at 20C
 
     def __init__(self, Left_sensor=5, Front_sensor=16, Right_sensor=18, debug=False):
         """
@@ -69,10 +69,11 @@ class Ultrasonic:
                 if self.debug:
                     print(f"Timeout waiting for echo start on pin {pin}")
                 return None
-        
+
         # Record when echo started
         pulse_start = time.time()
-        
+        pulse_end = pulse_start
+
         # Wait for echo to end (falling edge)
         while GPIO.input(pin) == 1:
             pulse_end = time.time()
@@ -201,9 +202,10 @@ class Ultrasonic:
         if not valid_readings:
             return None, None
             
-        # Find closest obstacle
-        closest_direction = min(valid_readings, key=valid_readings.get)
-        closest_distance = valid_readings[closest_direction]
+        # Find closest obstacle (type-checker friendly)
+        closest_direction, closest_distance = min(
+            valid_readings.items(), key=lambda kv: kv[1]
+        )
         
         if self.debug:
             print(f"Closest obstacle: {closest_distance:.1f}cm to the {closest_direction}")
@@ -245,45 +247,50 @@ class Ultrasonic:
                 print(f"Error during cleanup: {e}")
 
 if __name__ == "__main__":
+    ultrasonic = None
     try:
-        print("🔧 Testing Improved Ultrasonic Sensor Library")
+        print("Testing Improved Ultrasonic Sensor Library")
         print("=" * 50)
-        
+
         ultrasonic = Ultrasonic(debug=True)
-        
-        print("\n🧪 Basic distance test...")
+
+        print("\nBasic distance test...")
         for i in range(3):
             left, front, right = ultrasonic.distances()
             print(f"Reading {i+1}:")
             print(f"  Left: {left:.1f}cm" if left else "  Left: No reading")
-            print(f"  Front: {front:.1f}cm" if front else "  Front: No reading") 
+            print(f"  Front: {front:.1f}cm" if front else "  Front: No reading")
             print(f"  Right: {right:.1f}cm" if right else "  Right: No reading")
             time.sleep(1)
-            
-        print("\n🎯 Averaged readings test...")
+
+        print("\nAveraged readings test...")
         left, front, right = ultrasonic.distances(use_average=True, samples=5)
-        print(f"Averaged readings:")
+        print("Averaged readings:")
         print(f"  Left: {left:.1f}cm" if left else "  Left: No reading")
         print(f"  Front: {front:.1f}cm" if front else "  Front: No reading")
         print(f"  Right: {right:.1f}cm" if right else "  Right: No reading")
-        
-        print("\n🚨 Obstacle detection test...")
+
+        print("\nObstacle detection test...")
         distance, direction = ultrasonic.get_closest_obstacle()
         if distance:
             print(f"Closest obstacle: {distance:.1f}cm to the {direction}")
         else:
             print("No obstacles detected")
-            
-        print("\n🛣️ Path clear test...")
+
+        print("\nPath clear test...")
         if ultrasonic.is_path_clear(30):
-            print("✅ Path is clear for 30cm+")
+            print("Path is clear for 30cm+")
         else:
-            print("⚠️ Path is blocked within 30cm")
-            
+            print("Path is blocked within 30cm")
+
     except KeyboardInterrupt:
-        print("\n⚠️ Test interrupted by user")
+        print("\nTest interrupted by user")
     except Exception as e:
-        print(f"\n❌ Error during test: {e}")
+        print(f"\nError during test: {e}")
     finally:
-        ultrasonic.cleanup()
-        print("🏁 Test complete")
+        try:
+            if ultrasonic is not None:
+                ultrasonic.cleanup()
+        except Exception:
+            pass
+        print("Test complete")
