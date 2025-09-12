@@ -1,8 +1,4 @@
 #!/bin/bash
-
-# One-Click Setup Script for Mobile Robot on Raspberry Pi 5
-# ASCII-only output; safe to run multiple times (idempotent where possible)
-
 set -e
 
 # Helper to print status
@@ -100,12 +96,7 @@ if [ -f "requirements.txt" ]; then
 else
     echo "requirements.txt not found; skipping"
 fi
-echo "PIP INSTALL SUMMARY"
-echo "  success: ${#success_pkgs[@]}"
-echo "  failed:  ${#fail_pkgs[@]}"
-if [ ${#fail_pkgs[@]} -gt 0 ]; then
-    echo "  failed list:"; for p in "${fail_pkgs[@]}"; do echo "    - $p"; done
-fi
+
 
 # 6) Install local libraries via pip (editable copies not required)
 ROBOT_PATH=$(pwd)
@@ -135,6 +126,12 @@ fi
 echo "=============================================================="
 echo "Setup completed"
 echo "=============================================================="
+echo "PIP INSTALL SUMMARY"
+echo "  success: ${#success_pkgs[@]}"
+echo "  failed:  ${#fail_pkgs[@]}"
+if [ ${#fail_pkgs[@]} -gt 0 ]; then
+    echo "  failed list:"; for p in "${fail_pkgs[@]}"; do echo "    - $p"; done
+fi
 echo "Next steps:"
 echo "  1) Reboot the Raspberry Pi: sudo reboot"
 echo "  2) After reboot, run your robot scripts from the MobileRobot directory"

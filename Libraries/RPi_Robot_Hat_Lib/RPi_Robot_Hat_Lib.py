@@ -557,6 +557,27 @@ class RobotController:
         for motor in ['RF', 'RB', 'LF', 'LB']:
             self.set_motor(motor, 0)
 
+    def cleanup_buzzer(self):
+        """Safely stop the buzzer PWM and release its GPIO pin."""
+        try:
+            if hasattr(self, 'buzzer_pwm'):
+                try:
+                    self.buzzer_pwm.stop()
+                except Exception as e:
+                    print(f"Warning: Buzzer PWM stop error: {e}")
+                try:
+                    delattr(self, 'buzzer_pwm')
+                except Exception as e:
+                    print(f"Warning: Buzzer attribute cleanup error: {e}")
+            # Attempt to cleanup the buzzer pin (GPIO 12)
+            try:
+                GPIO.cleanup(12)
+            except Exception:
+                # Ignore if not set up or already cleaned
+                pass
+        except Exception as e:
+            print(f"Warning: Buzzer cleanup exception: {e}")
+
     def cleanup(self):
         """Clean up resources"""
         self.stop()
@@ -564,16 +585,7 @@ class RobotController:
         self.set_servo(1, 90)
         self.set_servo(2, 90)
         # Cleanup buzzer safely
-        if hasattr(self, 'buzzer_pwm'):
-            try:
-                self.buzzer_pwm.stop()
-                delattr(self, 'buzzer_pwm')
-            except Exception as e:
-                print(f"Warning: Buzzer cleanup error: {e}")
-            try:
-                GPIO.cleanup(12)  # Cleanup buzzer GPIO
-            except Exception as e:
-                print(f"Warning: GPIO cleanup error: {e}")
+        self.cleanup_buzzer()
 
 if __name__ == "__main__":
     robot = RobotController(debug=True)
