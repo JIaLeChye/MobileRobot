@@ -24,7 +24,7 @@ Author: JIaLeChye
 GitHub: https://github.com/JIaLeChye/MobileRobot
 """
 
-__version__ = "1.2.9"
+__version__ = "1.2.10"
 __author__ = "JIaLeChye"
 __email__ = "jialecjl2016@outlook.com"
 __license__ = "MIT"
