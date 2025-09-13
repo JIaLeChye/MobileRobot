@@ -19,305 +19,305 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
-        persist-credentials: true
-        ref: ${{ github.head_ref || github.ref }}
-    
-  - name: Setup Git
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "Library Version Bot"
-        git config --global pull.rebase false
-        echo "🔧 Git configuration complete"
-    
-  - name: Check for library changes and update versions
-      run: |
-        echo "🔍 Checking for meaningful library file changes..."
-        
-        # Check if this commit was made by any bot (avoid infinite loops)
-        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-        COMMIT_AUTHOR=$(git log -1 --pretty=%an)
-        
-        if [[ "$COMMIT_MESSAGE" == *"Auto-update library versions"* ]] || [[ "$COMMIT_AUTHOR" == *"Bot"* ]]; then
-          echo "🛑 This commit was made by a bot, skipping to avoid infinite loop"
-          exit 0
-        fi
-        
-        # Define library directories with specific files that matter for versioning
-        LIB_DIRS=(
-          "Libraries/RPi_Robot_Hat_Lib/"
-          "Libraries/Ultrasonic_Sensor/"
-          "Libraries/IR_Sensor/"
-        )
-        
-        # Get changed files - only look at actual library source files
-        changed_files=$(git diff --name-only HEAD~1 HEAD | grep -E "\.(py)$" | grep "Libraries/" || true)
-        
-        # Filter out non-essential files
-        meaningful_changes=$(echo "$changed_files" | grep -v "__pycache__" | grep -v ".egg-info" | grep -v ".pyc" || true)
-        
-        echo "📝 All changed files:"
-        git diff --name-only HEAD~1 HEAD
-        echo ""
-        echo "📚 Library files changed:"
-        echo "$meaningful_changes"
-        echo ""
-        
-        # Check if any meaningful library files were changed
-        if [ -z "$meaningful_changes" ]; then
-          echo "ℹ️  No meaningful library files changed, versions remain unchanged"
-          echo "💡 Only Python files (.py) in Libraries/ directories trigger version updates"
-          exit 0
-        fi
-        
-        lib_files_changed=false
-        for lib_dir in "${LIB_DIRS[@]}"; do
-          if echo "$meaningful_changes" | grep -q "^${lib_dir}"; then
-            lib_files_changed=true
-            echo "📚 Meaningful library changes detected in: $lib_dir"
-          fi
-        done
-        
-        if [ "$lib_files_changed" = false ]; then
-          echo "ℹ️  Changed files are not in monitored library directories"
-          echo "📁 Monitored directories: ${LIB_DIRS[*]}"
-          exit 0
-        fi
-        
-        # Function to validate SemVer format
-        validate_semver() {
-          local version="$1"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid SemVer format: $version"
-            return 1
-          fi
-          return 0
-        }
-        
-        # Function to increment PATCH version (SemVer compliant)
-        increment_patch() {
-          local version="$1"
-          local major=$(echo "$version" | cut -d. -f1)
-          local minor=$(echo "$version" | cut -d. -f2)
-          local patch=$(echo "$version" | cut -d. -f3)
-          patch=$((patch + 1))
-          echo "${major}.${minor}.${patch}"
-        }
-        
-        # Function to update version in Python file
-        update_python_version() {
-          local file="$1"
-          local new_version="$2"
-          if grep -q 'self\.lib_ver=' "$file"; then
-            sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
-            echo "✅ Updated Python version to $new_version in $file"
-            return 0
-          fi
-          return 1
-        }
-        
-  # Function to update version in setup.py
-        update_setup_version() {
-          local file="$1"
-          local new_version="$2"
-          if grep -q 'version=' "$file"; then
-            sed -i "s/version=\"[^\"]*\"/version=\"${new_version}\"/" "$file"
-            echo "✅ Updated setup.py version to $new_version in $file"
-            return 0
-          fi
-          return 1
-        }
-        
-        # Function to update version in __init__.py
-        update_init_version() {
-          local file="$1"
-          local new_version="$2"
-          if grep -q '__version__' "$file"; then
-            sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
-            echo "✅ Updated __init__.py version to $new_version in $file"
-            return 0
-          fi
-          return 1
-        }
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          ref: ${{ github.head_ref || github.ref }}
 
-        # Function to update the versions displayed in README.md
-        update_readme_version() {
-          local lib_display_name="$1"   # Display name in README (e.g., RPi_Robot_Hat_Lib)
-          local new_version="$2"
-          if [ -f "README.md" ]; then
-            # Replace version after the display name, format: **Name**: x.y.z
-            sed -i "s|\*\*${lib_display_name}\*\*: [0-9]\+\.[0-9]\+\.[0-9]\+|**${lib_display_name}**: ${new_version}|" README.md || true
-          fi
-        }
-        
-        # Robust push function with conflict resolution
-        robust_push() {
-          local max_attempts=5
-          local attempt=1
+      - name: Setup Git
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "Library Version Bot"
+          git config --global pull.rebase false
+          echo "🔧 Git configuration complete"
+
+      - name: Check for library changes and update versions
+        run: |
+          echo "🔍 Checking for meaningful library file changes..."
           
-          while [ $attempt -le $max_attempts ]; do
-            echo "🚀 Push attempt $attempt/$max_attempts..."
-            
-            # Fetch latest changes
-            git fetch origin ${{ github.ref_name }}
-            
-            # Check if we're behind
-            LOCAL=$(git rev-parse HEAD)
-            REMOTE=$(git rev-parse origin/${{ github.ref_name }})
-            
-            if [ "$LOCAL" != "$REMOTE" ]; then
-              echo "⚠️  Remote has new commits, rebasing..."
-              
-              # Stash our changes if any
-              git stash push -m "Auto-version update stash" || true
-              
-              # Pull with rebase
-              git pull --rebase origin ${{ github.ref_name }}
-              
-              # Apply our stashed changes
-              git stash pop || true
-              
-              # Re-add files in case of conflicts
-              git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py 2>/dev/null || true
-              
-              # Commit again if needed
-              if ! git diff --cached --quiet; then
-                git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
-              fi
+          # Check if this commit was made by any bot (avoid infinite loops)
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          
+          if [[ "$COMMIT_MESSAGE" == *"Auto-update library versions"* ]] || [[ "$COMMIT_AUTHOR" == *"Bot"* ]]; then
+            echo "🛑 This commit was made by a bot, skipping to avoid infinite loop"
+            exit 0
+          fi
+          
+          # Define library directories with specific files that matter for versioning
+          LIB_DIRS=(
+            "Libraries/RPi_Robot_Hat_Lib/"
+            "Libraries/Ultrasonic_Sensor/"
+            "Libraries/IR_Sensor/"
+          )
+          
+          # Get changed files - only look at actual library source files
+          changed_files=$(git diff --name-only HEAD~1 HEAD | grep -E "\.(py)$" | grep "Libraries/" || true)
+          
+          # Filter out non-essential files
+          meaningful_changes=$(echo "$changed_files" | grep -v "__pycache__" | grep -v ".egg-info" | grep -v ".pyc" || true)
+          
+          echo "📝 All changed files:"
+          git diff --name-only HEAD~1 HEAD
+          echo ""
+          echo "📚 Library files changed:"
+          echo "$meaningful_changes"
+          echo ""
+          
+          # Check if any meaningful library files were changed
+          if [ -z "$meaningful_changes" ]; then
+            echo "ℹ️  No meaningful library files changed, versions remain unchanged"
+            echo "💡 Only Python files (.py) in Libraries/ directories trigger version updates"
+            exit 0
+          fi
+          
+          lib_files_changed=false
+          for lib_dir in "${LIB_DIRS[@]}"; do
+            if echo "$meaningful_changes" | grep -q "^${lib_dir}"; then
+              lib_files_changed=true
+              echo "📚 Meaningful library changes detected in: $lib_dir"
             fi
-            
-            # Try to push
-            if git push origin HEAD:${{ github.ref_name }}; then
-              echo "✅ Successfully pushed on attempt $attempt"
-              return 0
-            else
-              echo "❌ Push failed on attempt $attempt"
-              if [ $attempt -eq $max_attempts ]; then
-                echo "💥 Failed to push after $max_attempts attempts"
-                return 1
-              fi
-              
-              # Wait before retry with exponential backoff
-              sleep_time=$((2 ** attempt))
-              echo "⏳ Waiting ${sleep_time}s before retry..."
-              sleep $sleep_time
-            fi
-            
-            attempt=$((attempt + 1))
           done
-        }
-        
-        echo ""
-        echo " SemVer compliant auto-versioning activated..."
-        echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
-        echo ""
-        
-        files_updated=false
-        
-        # Update RPi_Robot_Hat_Lib if changed
-        if echo "$meaningful_changes" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
-          ROBOT_HAT_FILE="Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py"
-          ROBOT_HAT_SETUP="Libraries/RPi_Robot_Hat_Lib/setup.py"
-          ROBOT_HAT_INIT="Libraries/RPi_Robot_Hat_Lib/__init__.py"
           
-          if [ -f "$ROBOT_HAT_FILE" ]; then
-            # Extract current version
-            current_version=$(grep -o 'self\.lib_ver= "[^"]*"' "$ROBOT_HAT_FILE" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
-            
-            if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
-              current_version="1.0.0"
-              echo "⚠️  No valid SemVer found in RPi_Robot_Hat_Lib, starting with $current_version"
-            fi
-            
-            new_version=$(increment_patch "$current_version")
-            echo "📈 RPi_Robot_Hat_Lib: $current_version → $new_version (PATCH)"
-            
-            # Update all version locations
-            if update_python_version "$ROBOT_HAT_FILE" "$new_version"; then
-              files_updated=true
-            fi
-            
-            if [ -f "$ROBOT_HAT_SETUP" ]; then
-              update_setup_version "$ROBOT_HAT_SETUP" "$new_version"
-            fi
-            
-            if [ -f "$ROBOT_HAT_INIT" ]; then
-              update_init_version "$ROBOT_HAT_INIT" "$new_version"
-            fi
-            
-            # Update README (display name matches exactly)
-            update_readme_version "RPi_Robot_Hat_Lib" "$new_version"
-            echo "✅ RPi_Robot_Hat_Lib updated to SemVer $new_version"
-            echo ""
+          if [ "$lib_files_changed" = false ]; then
+            echo "ℹ️  Changed files are not in monitored library directories"
+            echo "📁 Monitored directories: ${LIB_DIRS[*]}"
+            exit 0
           fi
-        fi
-        
-        # Update other libraries if changed
-        for lib_dir in "Libraries/Ultrasonic_Sensor" "Libraries/IR_Sensor"; do
-          if echo "$meaningful_changes" | grep -q "^${lib_dir}/"; then
-            setup_file="$lib_dir/setup.py"
-            init_file="$lib_dir/__init__.py"
+          
+          # Function to validate SemVer format
+          validate_semver() {
+            local version="$1"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Invalid SemVer format: $version"
+              return 1
+            fi
+            return 0
+          }
+          
+          # Function to increment PATCH version (SemVer compliant)
+          increment_patch() {
+            local version="$1"
+            local major=$(echo "$version" | cut -d. -f1)
+            local minor=$(echo "$version" | cut -d. -f2)
+            local patch=$(echo "$version" | cut -d. -f3)
+            patch=$((patch + 1))
+            echo "${major}.${minor}.${patch}"
+          }
+          
+          # Function to update version in Python file
+          update_python_version() {
+            local file="$1"
+            local new_version="$2"
+            if grep -q 'self\.lib_ver=' "$file"; then
+              sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
+              echo "✅ Updated Python version to $new_version in $file"
+              return 0
+            fi
+            return 1
+          }
+          
+          # Function to update version in setup.py
+          update_setup_version() {
+            local file="$1"
+            local new_version="$2"
+            if grep -q 'version=' "$file"; then
+              sed -i "s/version=\"[^\"]*\"/version=\"${new_version}\"/" "$file"
+              echo "✅ Updated setup.py version to $new_version in $file"
+              return 0
+            fi
+            return 1
+          }
+          
+          # Function to update version in __init__.py
+          update_init_version() {
+            local file="$1"
+            local new_version="$2"
+            if grep -q '__version__' "$file"; then
+              sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
+              echo "✅ Updated __init__.py version to $new_version in $file"
+              return 0
+            fi
+            return 1
+          }
+
+          # Function to update the versions displayed in README.md
+          update_readme_version() {
+            local lib_display_name="$1"   # Display name in README (e.g., RPi_Robot_Hat_Lib)
+            local new_version="$2"
+            if [ -f "README.md" ]; then
+              # Replace version after the display name, format: **Name**: x.y.z
+              sed -i "s|\*\*${lib_display_name}\*\*: [0-9]\+\.[0-9]\+\.[0-9]\+|**${lib_display_name}**: ${new_version}|" README.md || true
+            fi
+          }
+          
+          # Robust push function with conflict resolution
+          robust_push() {
+            local max_attempts=5
+            local attempt=1
             
-            if [ -f "$setup_file" ]; then
+            while [ $attempt -le $max_attempts ]; do
+              echo "🚀 Push attempt $attempt/$max_attempts..."
+              
+              # Fetch latest changes
+              git fetch origin ${{ github.ref_name }}
+              
+              # Check if we're behind
+              LOCAL=$(git rev-parse HEAD)
+              REMOTE=$(git rev-parse origin/${{ github.ref_name }})
+              
+              if [ "$LOCAL" != "$REMOTE" ]; then
+                echo "⚠️  Remote has new commits, rebasing..."
+                
+                # Stash our changes if any
+                git stash push -m "Auto-version update stash" || true
+                
+                # Pull with rebase
+                git pull --rebase origin ${{ github.ref_name }}
+                
+                # Apply our stashed changes
+                git stash pop || true
+                
+                # Re-add files in case of conflicts
+                git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py 2>/dev/null || true
+                
+                # Commit again if needed
+                if ! git diff --cached --quiet; then
+                  git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
+                fi
+              fi
+              
+              # Try to push
+              if git push origin HEAD:${{ github.ref_name }}; then
+                echo "✅ Successfully pushed on attempt $attempt"
+                return 0
+              else
+                echo "❌ Push failed on attempt $attempt"
+                if [ $attempt -eq $max_attempts ]; then
+                  echo "💥 Failed to push after $max_attempts attempts"
+                  return 1
+                fi
+                
+                # Wait before retry with exponential backoff
+                sleep_time=$((2 ** attempt))
+                echo "⏳ Waiting ${sleep_time}s before retry..."
+                sleep $sleep_time
+              fi
+              
+              attempt=$((attempt + 1))
+            done
+          }
+          
+          echo ""
+          echo " SemVer compliant auto-versioning activated..."
+          echo "🔧 Auto-incrementing PATCH versions (bug fixes)"
+          echo ""
+          
+          files_updated=false
+          
+          # Update RPi_Robot_Hat_Lib if changed
+          if echo "$meaningful_changes" | grep -q "^Libraries/RPi_Robot_Hat_Lib/"; then
+            ROBOT_HAT_FILE="Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py"
+            ROBOT_HAT_SETUP="Libraries/RPi_Robot_Hat_Lib/setup.py"
+            ROBOT_HAT_INIT="Libraries/RPi_Robot_Hat_Lib/__init__.py"
+            
+            if [ -f "$ROBOT_HAT_FILE" ]; then
               # Extract current version
-              current_version=$(grep -o 'version="[^"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+              current_version=$(grep -o 'self\.lib_ver= "[^"]*"' "$ROBOT_HAT_FILE" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
               
               if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
                 current_version="1.0.0"
-                echo "⚠️  No valid SemVer found in $(basename "$lib_dir"), starting with $current_version"
+                echo "⚠️  No valid SemVer found in RPi_Robot_Hat_Lib, starting with $current_version"
               fi
               
               new_version=$(increment_patch "$current_version")
-              lib_name=$(basename "$lib_dir")
-              echo "📈 $lib_name: $current_version → $new_version (PATCH)"
+              echo "📈 RPi_Robot_Hat_Lib: $current_version → $new_version (PATCH)"
               
-              # Update versions
-              if update_setup_version "$setup_file" "$new_version"; then
+              # Update all version locations
+              if update_python_version "$ROBOT_HAT_FILE" "$new_version"; then
                 files_updated=true
               fi
               
-              if [ -f "$init_file" ]; then
-                update_init_version "$init_file" "$new_version"
+              if [ -f "$ROBOT_HAT_SETUP" ]; then
+                update_setup_version "$ROBOT_HAT_SETUP" "$new_version"
               fi
               
-              # Update README with possible display names used historically
-              case "$lib_name" in
-                "Ultrasonic_Sensor")
-                  update_readme_version "Ultrasonic_Sensor" "$new_version"
-                  update_readme_version "Ultrasonic_sens" "$new_version" # legacy display name
-                  ;;
-                "IR_Sensor")
-                  update_readme_version "IR_Sensor" "$new_version"
-                  update_readme_version "IRSens" "$new_version" # legacy display name
-                  ;;
-              esac
-
-              echo "✅ $lib_name updated to SemVer $new_version"
+              if [ -f "$ROBOT_HAT_INIT" ]; then
+                update_init_version "$ROBOT_HAT_INIT" "$new_version"
+              fi
+              
+              # Update README (display name matches exactly)
+              update_readme_version "RPi_Robot_Hat_Lib" "$new_version"
+              echo "✅ RPi_Robot_Hat_Lib updated to SemVer $new_version"
               echo ""
             fi
           fi
-        done
-        
-        # Commit version updates if any files were updated
-        if [ "$files_updated" = true ]; then
-          echo "📦 Committing version updates..."
-          git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py README.md
-          git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
           
-          # Use robust push with conflict resolution
-          if robust_push; then
-            echo "🎉 Library versions updated and committed successfully!"
+          # Update other libraries if changed
+          for lib_dir in "Libraries/Ultrasonic_Sensor" "Libraries/IR_Sensor"; do
+            if echo "$meaningful_changes" | grep -q "^${lib_dir}/"; then
+              setup_file="$lib_dir/setup.py"
+              init_file="$lib_dir/__init__.py"
+              
+              if [ -f "$setup_file" ]; then
+                # Extract current version
+                current_version=$(grep -o 'version="[^"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+                
+                if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
+                  current_version="1.0.0"
+                  echo "⚠️  No valid SemVer found in $(basename "$lib_dir"), starting with $current_version"
+                fi
+                
+                new_version=$(increment_patch "$current_version")
+                lib_name=$(basename "$lib_dir")
+                echo "📈 $lib_name: $current_version → $new_version (PATCH)"
+                
+                # Update versions
+                if update_setup_version "$setup_file" "$new_version"; then
+                  files_updated=true
+                fi
+                
+                if [ -f "$init_file" ]; then
+                  update_init_version "$init_file" "$new_version"
+                fi
+                
+                # Update README with possible display names used historically
+                case "$lib_name" in
+                  "Ultrasonic_Sensor")
+                    update_readme_version "Ultrasonic_Sensor" "$new_version"
+                    update_readme_version "Ultrasonic_sens" "$new_version" # legacy display name
+                    ;;
+                  "IR_Sensor")
+                    update_readme_version "IR_Sensor" "$new_version"
+                    update_readme_version "IRSens" "$new_version" # legacy display name
+                    ;;
+                esac
+
+                echo "✅ $lib_name updated to SemVer $new_version"
+                echo ""
+              fi
+            fi
+          done
+          
+          # Commit version updates if any files were updated
+          if [ "$files_updated" = true ]; then
+            echo "📦 Committing version updates..."
+            git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py README.md
+            git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
+            
+            # Use robust push with conflict resolution
+            if robust_push; then
+              echo "🎉 Library versions updated and committed successfully!"
+            else
+              echo "💥 Failed to push version updates after multiple attempts"
+              echo "ℹ️  This might be due to concurrent pushes, but versions were updated locally"
+              exit 1
+            fi
           else
-            echo "💥 Failed to push version updates after multiple attempts"
-            echo "ℹ️  This might be due to concurrent pushes, but versions were updated locally"
-            exit 1
+            echo "ℹ️  No version files needed updating"
           fi
-        else
-          echo "ℹ️  No version files needed updating"
-        fi
-        
-        echo ""
-        echo "📖 SemVer Reference: https://semver.org/"
-        echo "💡 For MINOR/MAJOR versions, use manual semver_bump.sh script"
+          
+          echo ""
+          echo "📖 SemVer Reference: https://semver.org/"
+          echo "💡 For MINOR/MAJOR versions, use manual semver_bump.sh script"
