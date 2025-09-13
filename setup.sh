@@ -64,36 +64,7 @@ else
 fi
 check_status "I2C/Camera check"
 
-# 4) GPIO library for Pi 5 - Complete fix with verification
-echo "=============================================================="
-echo "GPIO Library Setup for Raspberry Pi 5"
-echo "=============================================================="
-
-# Step 1: Remove ALL old RPi.GPIO installations (pip and system)
-echo "Removing old RPi.GPIO library completely..."
-sudo pip3 uninstall -y RPi.GPIO 2>/dev/null || true
-sudo pip3 uninstall -y RPi.GPIO --break-system-packages 2>/dev/null || true
-sudo apt remove -y python3-rpi.gpio 2>/dev/null || true
-
-# Step 2: Clean up any remaining RPi.GPIO files that might cause conflicts
-echo "Cleaning up old RPi.GPIO files..."
-sudo rm -rf /usr/local/lib/python3.11/dist-packages/RPi* 2>/dev/null || true
-sudo rm -rf /usr/local/lib/python3.11/dist-packages/rpi_lgpio* 2>/dev/null || true
-
-# Step 3: Install rpi-lgpio via apt (provides RPi.GPIO compatibility for Pi 5)
-echo "Installing rpi-lgpio via apt..."
-sudo apt install --reinstall -y python3-rpi-lgpio
-
-# Step 4: Verify the installation works
-echo "Verifying GPIO library installation..."
-if python3 -c "import RPi.GPIO as GPIO; print('RPi.GPIO compatibility layer working')" 2>/dev/null; then
-    echo "✓ RPi.GPIO compatibility layer working properly"
-else
-    echo "✗ RPi.GPIO compatibility layer failed - this may cause issues"
-fi
-
-echo "GPIO setup completed - Pi 5 compatible libraries installed."
-check_status "GPIO library installation"
+# 4) Note: GPIO library setup moved to end of script to prevent conflicts
 
 # 5) Python dependencies from requirements.txt (best-effort)
 echo "Installing Python requirements (best-effort)..."
@@ -144,10 +115,7 @@ if [ -d "$ROBOT_PATH/Libraries/RPi_Robot_Hat_Lib" ]; then
     }
 fi
 
-# Remove RPi.GPIO if installed by Adafruit libraries
-echo "Checking for and removing RPi.GPIO to prevent conflicts..."
-sudo pip3 uninstall -y RPi.GPIO 2>/dev/null || true
-check_status "RPi.GPIO removal after Adafruit library installation"
+# Note: Not removing RPi.GPIO here - final GPIO setup happens at script end
 
 # Verify custom library installations
 custom_libraries=("RPi_Robot_Hat_Lib" "Ultrasonic_Sensor" "IR_Sensor")
@@ -187,6 +155,55 @@ echo "I2C quick probe (optional)..."
 if command -v i2cdetect >/dev/null 2>&1; then
     sudo i2cdetect -y 1 2>/dev/null || echo "No I2C devices detected (ok if hardware not connected)"
 fi
+
+# 9) FINAL GPIO library setup for Pi 5 - Done last to prevent conflicts
+echo "=============================================================="
+echo "FINAL: GPIO Library Setup for Raspberry Pi 5"
+echo "=============================================================="
+
+# Step 1: Remove ALL old RPi.GPIO installations that may have been installed by dependencies
+echo "Final cleanup: Removing any RPi.GPIO installations that conflict with rpi-lgpio..."
+sudo pip3 uninstall -y RPi.GPIO 2>/dev/null || true
+sudo pip3 uninstall -y RPi.GPIO --break-system-packages 2>/dev/null || true
+pip3 uninstall -y RPi.GPIO 2>/dev/null || true  # Remove user-installed version
+sudo apt remove -y python3-rpi.gpio 2>/dev/null || true
+
+# Step 2: Clean up any remaining RPi.GPIO files that might cause conflicts
+echo "Cleaning up old RPi.GPIO files (preserving RPi_Robot_Hat_Lib)..."
+sudo rm -rf /usr/local/lib/python3.11/dist-packages/RPi.GPIO* 2>/dev/null || true
+sudo rm -rf /usr/local/lib/python3.11/dist-packages/rpi_lgpio* 2>/dev/null || true
+# Also clean user-installed packages - be specific to avoid removing RPi_Robot_Hat_Lib
+rm -rf ~/.local/lib/python3.11/site-packages/RPi.GPIO* 2>/dev/null || true
+
+# Step 3: Install rpi-lgpio via apt (provides RPi.GPIO compatibility for Pi 5)
+echo "Installing rpi-lgpio via apt..."
+sudo apt install --reinstall -y python3-rpi-lgpio
+
+# Step 4: Verify the installation works
+echo "Verifying GPIO library installation..."
+if python3 -c "import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.setup(12, GPIO.OUT); print('RPi.GPIO compatibility layer working')" 2>/dev/null; then
+    echo "✓ RPi.GPIO compatibility layer working properly"
+else
+    echo "✗ RPi.GPIO compatibility layer failed - this may cause issues"
+fi
+
+# Show which module path is being used to detect shadowed pip wheels
+python3 - <<'PY'
+try:
+    import RPi.GPIO as GPIO
+    import os
+    p = getattr(GPIO, '__file__', 'unknown')
+    print(f"RPi.GPIO module path: {p}")
+    if 'dist-packages' in p and ('rpi' in p.lower() or 'RPi' in p):
+        print('[OK] rpi-lgpio shim likely active')
+    elif 'site-packages' in p:
+        print('[WARN] pip RPi.GPIO wheel may be shadowing the shim')
+except Exception as e:
+    print('Could not inspect RPi.GPIO path:', e)
+PY
+
+echo "GPIO setup completed - Pi 5 compatible libraries installed."
+check_status "Final GPIO library installation"
 
 echo "=============================================================="
 echo "Setup completed"

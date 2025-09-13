@@ -188,9 +188,6 @@ font5x8.bin
 !RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py
 !Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py
 
-# Old test files (keep unified test)
-*test*.py
-!unified_self_test.py
 
 # Temporary files - removed for customer simplicity
 version_manager.py

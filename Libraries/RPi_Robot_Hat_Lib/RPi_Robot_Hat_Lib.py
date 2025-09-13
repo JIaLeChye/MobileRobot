@@ -124,10 +124,6 @@ class RobotController:
         self.set_motor('RF', right_speed)
         self.set_motor('RB', right_speed)
 
-    def Brake(self):
-        """Stop all motors"""
-        self.stop()
-    
     def turn_left(self, speed):
         """Turn left with specified speed (0-100)"""
         self.move(0, speed)  # Use existing move function with turn parameter
@@ -137,7 +133,7 @@ class RobotController:
         self.move(0, -speed)  # Use existing move function with negative turn
 
     def Horizontal_Left(self, speed):
-        """Move Horizontal Left with specified spedd (0 - 100)"""
+        """Move Horizontal Left with specified speed (0 - 100)"""
         self.set_motor('LF', -abs(speed))
         self.set_motor('RF', abs(speed))
         self.set_motor('LB', abs(speed))
@@ -145,7 +141,7 @@ class RobotController:
     
 
     def Horizontal_Right(self, speed):
-        """Move Horizontal Right with specified spedd (0 - 100)"""
+        """Move Horizontal Right with specified speed (0 - 100)"""
         self.set_motor('LF', abs(speed))
         self.set_motor('RF', -abs(speed))
         self.set_motor('LB', -abs(speed))
