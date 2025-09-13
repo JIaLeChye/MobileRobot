@@ -95,7 +95,7 @@ class RobotController:
         
     ###################################
 
-    
+
     ##---------Movement Section-------##
 
     def Forward(self, speed):
@@ -266,7 +266,6 @@ class RobotController:
             return 0
         
        
-        
     def get_distance(self, motor, debug=False):
         """Calculate calibrated distance traveled by a specific motor in meters"""
         try:
@@ -419,7 +418,6 @@ class RobotController:
         return final_avg_distance
     ##########################################
 
-    
 
     ##--------Servo Movement section--------## 
     def set_servo(self, servo_num, angle):
@@ -447,7 +445,6 @@ class RobotController:
     ##########################################
 
 
-
     ##----Line Following sensor section-----##
     def read_line_sensors(self):
         """Read the digital line sensors (5 bits)"""
@@ -467,8 +464,6 @@ class RobotController:
         
     ##########################################
 
-
-
     ##------------Battery Section-----------## 
     def get_battery(self):
         """Read battery voltage"""
@@ -480,7 +475,6 @@ class RobotController:
             return 0
     
     #############################################
-
 
 
     ##-------Encoder Calibration Section-------## 
