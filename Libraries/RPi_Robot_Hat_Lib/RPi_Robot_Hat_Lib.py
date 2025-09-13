@@ -94,8 +94,10 @@ class RobotController:
             return False
         
     ###################################
+
+    
     ##---------Movement Section-------##
-    ###################################
+
     def Forward(self, speed):
         """Move forward with specified speed (0-100)"""
         self.move(speed)  # Positive speed for forward
