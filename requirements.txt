@@ -7,24 +7,26 @@
 # ============================================================================
 
 # Core libraries for Mobile Robot
-rpi-lgpio>=0.6              # Modern GPIO library for Raspberry Pi 5
 adafruit-circuitpython-ssd1306  # OLED display
 smbus2                       # I2C communication
-numpy                        # Numerical computing
+numpy==1.26.4                # Numerical computing (compatible with TF 2.17/MediaPipe 0.10.x)
 opencv-contrib-python        # Computer vision (includes basic OpenCV)
 Pillow                       # Image processing
 picamera2                    # Raspberry Pi camera (if not system-installed)
-Adafruit_Blinka==8.54.0
+Adafruit_Blinka==8.54.0      # conflicts with rpi-lgpio on Pi 5
 smbus==1.1.post2
 
 # TensorFlow Lite and Machine Learning
 tflite-runtime              # TensorFlow Lite runtime for object detection
-mediapipe                   # Google's ML framework for hand gesture recognition
-tensorflow==2.18.0
+mediapipe==0.10.5            # Google's ML framework for hand gesture recognition
+tensorflow==2.17.0          # Downgraded to ensure compatibility with ml-dtypes==0.5.3
+tensorflow-object-detection-api  # TensorFlow Object Detection API
 
-# Computer Vision and Recognition
+# Computer Vision and Recogni
 apriltag                    # April Tag detection and recognition
 
 # IoT and Remote Control (from GitHub)
 git+https://github.com/vshymanskyy/blynk-library-python.git  # Mobile app remote control integration
+
+protobuf==3.20.3  # Compatible with TF Object Detection API and MediaPipe 0.10.5
 

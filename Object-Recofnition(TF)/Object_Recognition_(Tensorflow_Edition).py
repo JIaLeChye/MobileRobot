@@ -3,9 +3,16 @@
 import tensorflow as tf 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils 
+import object_detection as od_pkg
+
+# TensorFlow 2.x compatibility for TF1-style code used by Object Detection API utils
+if not hasattr(tf, 'gfile'):
+    tf.gfile = tf.io.gfile  # type: ignore
 
 ## Required files validation
 import os
+import tarfile
+import urllib.request
 
 ## To get the accurate time 
 import time
@@ -26,8 +33,59 @@ frame_width = 640
 model_folder = 'object_detection'
 model_Name = '/ssdlite_mobilenet_v2_coco_2018_05_09'
 path_To_ckpt = model_folder + model_Name + '/frozen_inference_graph.pb'
-path_to_labels = os.path.join(model_folder + '/data/mscoco_label_map.pbtxt')
+
+# Prefer the label map bundled with the installed object_detection package
+try:
+    _pkg_dir = os.path.dirname(od_pkg.__file__)
+    path_to_labels = os.path.join(_pkg_dir, 'data', 'mscoco_label_map.pbtxt')
+except Exception:
+    # Fallback to local relative path if package resource lookup fails
+    path_to_labels = os.path.join(model_folder, 'data', 'mscoco_label_map.pbtxt')
+
 number_Class = 90
+
+MODEL_BASE_URL = 'http://download.tensorflow.org/models/object_detection/'
+MODEL_ARCHIVE = 'ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz'
+LABEL_MAP_URL = 'https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/data/mscoco_label_map.pbtxt'
+
+def ensure_label_map_present():
+    """Ensure the COCO label map exists locally; download if missing."""
+    nonlocal_path = path_to_labels
+    # If the package path doesn't exist, write to local object_detection/data
+    if not os.path.isfile(nonlocal_path):
+        local_labels_dir = os.path.join(model_folder, 'data')
+        os.makedirs(local_labels_dir, exist_ok=True)
+        local_labels_path = os.path.join(local_labels_dir, 'mscoco_label_map.pbtxt')
+        try:
+            print('Label map not found. Downloading COCO label map...')
+            urllib.request.urlretrieve(LABEL_MAP_URL, local_labels_path)
+            print('Label map saved to:', local_labels_path)
+            return local_labels_path
+        except Exception as e:
+            print('Failed to download label map:', e)
+            return nonlocal_path
+    return nonlocal_path
+
+def ensure_model_present():
+    """Download and extract the TF1 SSDLite MobileNet v2 model if missing."""
+    os.makedirs(model_folder, exist_ok=True)
+    if os.path.isfile(path_To_ckpt):
+        return True
+    archive_path = os.path.join(model_folder, MODEL_ARCHIVE)
+    try:
+        print('Model not found locally. Downloading:', MODEL_ARCHIVE)
+        urllib.request.urlretrieve(MODEL_BASE_URL + MODEL_ARCHIVE, archive_path)
+        print('Download complete. Extracting...')
+        with tarfile.open(archive_path, 'r:gz') as tar:
+            tar.extractall(model_folder)
+        try:
+            os.remove(archive_path)
+        except OSError:
+            pass
+        return os.path.isfile(path_To_ckpt)
+    except Exception as e:
+        print('Failed to download model:', e)
+        return False
 
 ## Check location of the files
 isCKPTexist = os.path.isfile(path_To_ckpt)
@@ -36,10 +94,30 @@ if isCKPTexist:
     print('Model Found at:', path_To_ckpt)
 else:
     print('Model Not Found')
+    # Try to fetch the model automatically
+    if ensure_model_present():
+        isCKPTexist = True
+        print('Model downloaded to:', path_To_ckpt)
 if isLabelexist:
     print('Label File Found at:', path_to_labels)
 else:
     print('Label File Not Found')
+    # Try to fetch the label map automatically
+    new_path = ensure_label_map_present()
+    path_to_labels = new_path
+    isLabelexist = os.path.isfile(path_to_labels)
+    if isLabelexist:
+        print('Label File Downloaded to:', path_to_labels)
+    else:
+        # If the package resource wasn't found, give a hint
+        if 'site-packages' not in path_to_labels:
+            print('Tip: Install tensorflow-object-detection-api or place mscoco_label_map.pbtxt under object_detection/data/')
+
+# Final guard before proceeding
+if not isCKPTexist:
+    raise FileNotFoundError(f"Missing model file: {path_To_ckpt}. Check your network and rerun, or provide the model locally.")
+if not isLabelexist:
+    raise FileNotFoundError(f"Missing label map: {path_to_labels}. Ensure TensorFlow Object Detection API is installed or provide the file locally.")
 
 ## load the Tensorflow Detection Graph
 print("Loading tensorflow Graph....")
