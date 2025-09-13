@@ -18,21 +18,21 @@ jobs:
       pull-requests: write
     
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
         persist-credentials: true
         ref: ${{ github.head_ref || github.ref }}
     
-    - name: Setup Git
+  - name: Setup Git
       run: |
         git config --global user.email "action@github.com"
         git config --global user.name "Library Version Bot"
         git config --global pull.rebase false
         echo "🔧 Git configuration complete"
     
-    - name: Check for library changes and update versions
+  - name: Check for library changes and update versions
       run: |
         echo "🔍 Checking for meaningful library file changes..."
         
