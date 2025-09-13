@@ -118,7 +118,7 @@ jobs:
           return 1
         }
         
-        # Function to update version in setup.py
+  # Function to update version in setup.py
         update_setup_version() {
           local file="$1"
           local new_version="$2"
@@ -140,6 +140,16 @@ jobs:
             return 0
           fi
           return 1
+        }
+
+        # Function to update the versions displayed in README.md
+        update_readme_version() {
+          local lib_display_name="$1"   # Display name in README (e.g., RPi_Robot_Hat_Lib)
+          local new_version="$2"
+          if [ -f "README.md" ]; then
+            # Replace version after the display name, format: **Name**: x.y.z
+            sed -i "s|\*\*${lib_display_name}\*\*: [0-9]\+\.[0-9]\+\.[0-9]\+|**${lib_display_name}**: ${new_version}|" README.md || true
+          fi
         }
         
         # Robust push function with conflict resolution
@@ -237,6 +247,8 @@ jobs:
               update_init_version "$ROBOT_HAT_INIT" "$new_version"
             fi
             
+            # Update README (display name matches exactly)
+            update_readme_version "RPi_Robot_Hat_Lib" "$new_version"
             echo "✅ RPi_Robot_Hat_Lib updated to SemVer $new_version"
             echo ""
           fi
@@ -270,6 +282,18 @@ jobs:
                 update_init_version "$init_file" "$new_version"
               fi
               
+              # Update README with possible display names used historically
+              case "$lib_name" in
+                "Ultrasonic_Sensor")
+                  update_readme_version "Ultrasonic_Sensor" "$new_version"
+                  update_readme_version "Ultrasonic_sens" "$new_version" # legacy display name
+                  ;;
+                "IR_Sensor")
+                  update_readme_version "IR_Sensor" "$new_version"
+                  update_readme_version "IRSens" "$new_version" # legacy display name
+                  ;;
+              esac
+
               echo "✅ $lib_name updated to SemVer $new_version"
               echo ""
             fi
@@ -279,7 +303,7 @@ jobs:
         # Commit version updates if any files were updated
         if [ "$files_updated" = true ]; then
           echo "📦 Committing version updates..."
-          git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py
+          git add Libraries/*/setup.py Libraries/*/*.py Libraries/*/__init__.py README.md
           git commit -m "🔖 Auto-update library versions (PATCH) [skip ci]" || true
           
           # Use robust push with conflict resolution

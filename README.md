@@ -5,7 +5,6 @@
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204%2F5-red.svg)](https://raspberrypi.org)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
-> **Documentation Languages**: [English](README.md) | [中文](使用说明.md)
 
 A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with advanced computer vision, autonomous navigation, and remote control capabilities.
 
@@ -94,7 +93,7 @@ All examples are designed to be easily modified:
 
 ### 🆘 Need Help?
 
-1. Check the README.md in each folder
+1. Check the jupyter notebook in each folder
 2. Look at the code comments for explanations
 3. Start with simple examples before complex ones
 4. Use the Libraries/ folder to understand core functions
@@ -141,11 +140,6 @@ MobileRobot/
 4. **📖 Read Documentation** - Each folder has its own README
 5. **🔧 Customize** - Modify examples for your specific needs
 
-3. **Test your robot**:
-   ```bash
-   source venv/bin/activate
-   python unified_self_test.py
-   ```
 
 ## 🔧 Installation
 
@@ -190,29 +184,6 @@ chmod +x setup.sh
    pip install .
    ```
 </details>
-
-## 🔌 Hardware Requirements
-
-### Required Components
-- **Raspberry Pi 4 or 5** (4GB+ RAM recommended)
-- **Raspberry Pi Camera Module** (v2 or v3)
-- **4x Geared Motors** with encoders
-- **Motor Driver Board** (PCA9685-based)
-- **Ultrasonic Sensors** (3x HC-SR04)
-- **IR Obstacle Sensor**
-- **Line Following Sensors** (5-array)
-- **OLED Display** (128x64 SSD1306)
-- **Battery Pack** (7.4V Li-Po recommended)
-
-### Optional Components
-- **Servo Motors** (2x for camera pan/tilt)
-- **Buzzer** for audio feedback
-- **IMU Sensor** for orientation tracking
-
-### Wiring Diagram
-```
-[Include wiring diagram or link to detailed hardware setup]
-```
 
 ## 📱 User Applications
 
@@ -274,22 +245,6 @@ We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTIN
 This project follows [Semantic Versioning](https://semver.org/) with **automatic version management**:
 - **Major.Minor.Patch** (e.g., 1.2.3)
 
-### 🔄 Automatic Library Versioning System
-
-The project includes an automatic versioning system that manages library versions based on Git commits.
-
-#### How It Works
-- **Automatic Versioning**: Pre-commit hook automatically increments patch version (+0.0.1) when library files are modified
-- **Manual Versioning**: Use `./bump_version.sh [major|minor|patch] [library_name]` for major or minor updates
-- **Monitored Libraries**:
-  - `Libraries/RPi_Robot_Hat_Lib/`
-  - `Libraries/Ultrasonic_Sensor/`
-  - `Libraries/IR_Sensor/`
-
-#### Version Rules
-- **Automatic (+0.0.1)**: Bug fixes, small improvements, code optimization, documentation updates
-- **Manual Major (+1.0.0)**: Breaking changes, major feature overhauls, API changes
-- **Manual Minor (+0.1.0)**: New significant features, new API methods, backward-compatible improvements
 
 #### Current Library Versions
 - **RPi_Robot_Hat_Lib**: 1.2.2
