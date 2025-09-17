@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ir-sensor-lib",
-    version="1.0.2",
+    version="1.0.3",
     description="IR sensor library for obstacle detection", 
     long_description="A library for controlling infrared sensors on Raspberry Pi robots, providing obstacle detection and proximity sensing capabilities.",
     long_description_content_type="text/plain",
