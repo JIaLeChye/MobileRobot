@@ -1,3 +1,25 @@
+          # Function to update version in main library .py file (e.g., IRSens.py, Ultrasonic_sens.py, RPi_Robot_Hat_Lib.py)
+          update_mainlib_version() {
+            local file="$1"
+            local new_version="$2"
+            local updated=false
+            # Update __version__ if present
+            if grep -q '__version__' "$file"; then
+              sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
+              echo "✅ Updated __version__ to $new_version in $file"
+              updated=true
+            fi
+            # Update self.lib_ver if present (for RPi_Robot_Hat_Lib)
+            if grep -q 'self\.lib_ver= ' "$file"; then
+              sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
+              echo "✅ Updated self.lib_ver to $new_version in $file"
+              updated=true
+            fi
+            if [ "$updated" = true ]; then
+              return 0
+            fi
+            return 1
+          }
 name: Auto Update Library Versions
 
 on:
@@ -221,32 +243,32 @@ jobs:
             ROBOT_HAT_FILE="Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py"
             ROBOT_HAT_SETUP="Libraries/RPi_Robot_Hat_Lib/setup.py"
             ROBOT_HAT_INIT="Libraries/RPi_Robot_Hat_Lib/__init__.py"
-            
+
             if [ -f "$ROBOT_HAT_FILE" ]; then
               # Extract current version
               current_version=$(grep -o 'self\.lib_ver= "[^"]*"' "$ROBOT_HAT_FILE" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
-              
+
               if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
                 current_version="1.0.0"
                 echo "⚠️  No valid SemVer found in RPi_Robot_Hat_Lib, starting with $current_version"
               fi
-              
+
               new_version=$(increment_patch "$current_version")
               echo "📈 RPi_Robot_Hat_Lib: $current_version → $new_version (PATCH)"
-              
+
               # Update all version locations
-              if update_python_version "$ROBOT_HAT_FILE" "$new_version"; then
+              if update_mainlib_version "$ROBOT_HAT_FILE" "$new_version"; then
                 files_updated=true
               fi
-              
+
               if [ -f "$ROBOT_HAT_SETUP" ]; then
                 update_setup_version "$ROBOT_HAT_SETUP" "$new_version"
               fi
-              
+
               if [ -f "$ROBOT_HAT_INIT" ]; then
                 update_init_version "$ROBOT_HAT_INIT" "$new_version"
               fi
-              
+
               # Update README (display name matches exactly)
               update_readme_version "RPi_Robot_Hat_Lib" "$new_version"
               echo "✅ RPi_Robot_Hat_Lib updated to SemVer $new_version"
@@ -259,29 +281,35 @@ jobs:
             if echo "$meaningful_changes" | grep -q "^${lib_dir}/"; then
               setup_file="$lib_dir/setup.py"
               init_file="$lib_dir/__init__.py"
-              
+              # Find the main library file (first .py file that is not __init__.py or setup.py)
+              mainlib_file=$(find "$lib_dir" -maxdepth 1 -type f -name "*.py" ! -name "__init__.py" ! -name "setup.py" | head -1)
+
               if [ -f "$setup_file" ]; then
                 # Extract current version
-                current_version=$(grep -o 'version="[^"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
-                
+                current_version=$(grep -o 'version="[^\"]*"' "$setup_file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+
                 if [ -z "$current_version" ] || ! validate_semver "$current_version"; then
                   current_version="1.0.0"
                   echo "⚠️  No valid SemVer found in $(basename "$lib_dir"), starting with $current_version"
                 fi
-                
+
                 new_version=$(increment_patch "$current_version")
                 lib_name=$(basename "$lib_dir")
                 echo "📈 $lib_name: $current_version → $new_version (PATCH)"
-                
+
                 # Update versions
                 if update_setup_version "$setup_file" "$new_version"; then
                   files_updated=true
                 fi
-                
+
                 if [ -f "$init_file" ]; then
                   update_init_version "$init_file" "$new_version"
                 fi
-                
+
+                if [ -f "$mainlib_file" ]; then
+                  update_mainlib_version "$mainlib_file" "$new_version"
+                fi
+
                 # Update README with possible display names used historically
                 case "$lib_name" in
                   "Ultrasonic_Sensor")
