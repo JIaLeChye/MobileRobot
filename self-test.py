@@ -6,7 +6,7 @@ import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
 
 # Mario tune notes (frequency in Hz)
-MARIO_MELODY = [
+MARIO_MELODY = [ 
     (660, 0.2), (660, 0.2), (0, 0.2), (660, 0.2), (0, 0.2), (523, 0.2), (660, 0.2),
     (0, 0.2), (784, 0.2), (0, 0.2), (392, 0.2), (0, 0.2), (523, 0.2), (0, 0.2),
     (392, 0.2), (0, 0.2), (330, 0.2), (0, 0.2), (440, 0.2), (0, 0.2), (494, 0.2),
