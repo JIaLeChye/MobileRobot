@@ -6,6 +6,7 @@ import board
 import busio
 import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
+from picamera2 import Picamera2  
 
 
 # Mario tune notes (frequency in Hz)
@@ -34,6 +35,8 @@ def initialize_oled():
         print(f"Error initializing OLED: {e}")
         return None, None, None, None
 
+
+        
 def test_menu():
     print("\nRobot Test Menu:")
     print("1. Basic movements test")
@@ -48,7 +51,90 @@ def test_menu():
     print("10. Buzzer test (Mario theme)")
     print("11. Ultrasonic sensor test")
     print("12. IR sensor test")
+    print("13. Camera test")
+    print("14. OLED test")
+    print("15. I2C test")
     print("0. Exit")
+
+def test_i2C():
+    print("\nTesting I2C bus...")
+    try:
+        i2c = busio.I2C(board.SCL, board.SDA)
+        while not i2c.try_lock():
+            pass
+        addresses = i2c.scan()
+        i2c.unlock()
+        if addresses:
+            print("I2C devices found at addresses:")
+            for addr in addresses:
+                if hex(addr) == hex(0x3c):  # Common address for SSD1306 OLED
+                    print(f"  - {hex(addr)} (OLED Display)")
+                elif hex(addr) == hex(0x9):  # RPi Robot Hat
+                    print(f"  - {hex(addr)} (Raspberry Pi Robot Hat)")
+                elif hex(addr) == hex(0x8):  # Grove Pi Hat
+                    print(f"  - {hex(addr)} (Grove Pi Hat)")
+                else:
+                    print(f"  - {hex(addr)} (Unknown Device)")
+        else:
+            print("No I2C devices found.")
+    except Exception as e:
+        print(f"I2C test error: {e}")
+
+
+    print("I2C test completed.\n")
+def test_camera():
+    print("\nTesting Camera...")
+    picam2 = None
+    try:
+        picam2 = Picamera2()
+        picam2.start()
+        time.sleep(2)  # Allow camera to warm up
+        frame = picam2.capture_array()
+        if frame is not None:
+            print("Camera test successful: Frame captured.")
+        else:
+            print("Camera test failed: No frame captured.")
+    except ImportError:
+        print("Picamera2 is not installed.")
+    except Exception as e:
+        print(f"Camera test error: {e}")
+    finally:
+        if picam2 is not None:
+            try:
+                print("Stopping camera...")
+                picam2.stop()
+                picam2.close()  # Properly close the camera to free resources
+            except Exception as e:
+                print(f"Error closing camera: {e}")
+        print("Camera test completed.\n")
+
+def test_OLED():
+    global disp, image, draw, font
+    print("\nTesting OLED display...")
+    try:
+        disp, image, draw, font = initialize_oled()
+        if all([disp, image, draw, font]):
+            draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=0)
+            draw.text((0, 0), "OLED Test", font=font, fill=255)
+            disp.image(image)
+            disp.show()
+            time.sleep(3)
+            disp.fill(1)
+            disp.show()
+            time.sleep(3)
+            disp.fill(0)
+            disp.show()
+            print("OLED test successful.")
+        else:
+            print("OLED test failed: Display not initialized.")
+    except Exception as e:
+        print(f"OLED test error: {e}")
+    finally:
+        if all([disp, image, draw, font]) and disp is not None:
+            disp.fill(0)
+            disp.show()
+        print("OLED test completed.\n")
+
 
 def test_basic_movements(robot):
     print("\nTesting basic movements...")
@@ -358,7 +444,7 @@ def main():
     try:
         while True:
             test_menu()
-            choice = input("\nSelect test (0-12): ")
+            choice = input("\nSelect test (0-15): ")
             
             if choice == '0':
                 break
@@ -386,6 +472,12 @@ def main():
                 test_ultrasonic()
             elif choice == '12':
                 test_ir_sensor()
+            elif choice == '13':
+                test_camera()
+            elif choice == '14':
+                test_OLED()
+            elif choice == '15':
+                test_i2C()
             else:
                 print("Invalid choice!")
                 
