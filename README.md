@@ -3,7 +3,6 @@
 [![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](./version.py)
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204%2F5-red.svg)](https://raspberrypi.org)
-[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
 
 A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with advanced computer vision, autonomous navigation, and remote control capabilities.

@@ -18,7 +18,6 @@ Example usage:
 """
 
 from .RPi_Robot_Hat_Lib import RobotController
-from .Encoder import *  # If Encoder module exists
 
 Author: JIaLeChye
 GitHub: https://github.com/JIaLeChye/MobileRobot
