@@ -1,21 +1,25 @@
 from RPi_Robot_Hat_Lib import RobotController
+from Ultrasonic_sens import Ultrasonic
+from IRSens import IRsens
 import time
 import board
 import busio
 import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
 
+
 # Mario tune notes (frequency in Hz)
 MARIO_MELODY = [ 
-    (660, 0.2), (660, 0.2), (0, 0.2), (660, 0.2), (0, 0.2), (523, 0.2), (660, 0.2),
-    (0, 0.2), (784, 0.2), (0, 0.2), (392, 0.2), (0, 0.2), (523, 0.2), (0, 0.2),
-    (392, 0.2), (0, 0.2), (330, 0.2), (0, 0.2), (440, 0.2), (0, 0.2), (494, 0.2),
-    (466, 0.2), (440, 0.2), (0, 0.2), (392, 0.2), (0, 0.2), (660, 0.2), (784, 0.2),
-    (880, 0.2), (0, 0.2), (698, 0.2), (784, 0.2), (0, 0.2), (660, 0.2), (0, 0.2),
-    (523, 0.2), (587, 0.2), (494, 0.2)
+    (660, 0.12), (660, 0.12), (0, 0.12), (660, 0.12), (0, 0.12), (523, 0.12), (660, 0.12),
+    (0, 0.12), (784, 0.12), (0, 0.12), (392, 0.12), (0, 0.12), (523, 0.12), (0, 0.12),
+    (392, 0.12), (0, 0.12), (330, 0.12), (0, 0.12), (440, 0.12), (0, 0.12), (494, 0.12),
+    (466, 0.12), (440, 0.12), (0, 0.12), (392, 0.12), (0, 0.12), (660, 0.12), (784, 0.12),
+    (880, 0.12), (0, 0.12), (698, 0.12), (784, 0.12), (0, 0.12), (660, 0.12), (0, 0.12),
+    (523, 0.12), (587, 0.12), (494, 0.12)
 ]
 
 def initialize_oled():
+    global disp, image, draw, font
     """Initialize OLED display"""
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
@@ -42,6 +46,8 @@ def test_menu():
     print("8. Battery voltage test")
     print("9. Servo test")
     print("10. Buzzer test (Mario theme)")
+    print("11. Ultrasonic sensor test")
+    print("12. IR sensor test")
     print("0. Exit")
 
 def test_basic_movements(robot):
@@ -123,34 +129,42 @@ def test_speeds(robot):
         time.sleep(1)
 
 def test_encoders(robot):
-    print("\nTesting encoders...")
-    # Get initial values
+
+    print("\nTesting encoders (with reset)...")
+    print("Resetting encoders to zero...")
+    robot.reset_encoders()
+    time.sleep(0.2)
     start_values = {
         'RF': robot.get_encoder('RF'),
         'RB': robot.get_encoder('RB'),
         'LF': robot.get_encoder('LF'),
         'LB': robot.get_encoder('LB')
     }
-    
-    # Move forward briefly
+    print("Initial encoder values:")
+    for k, v in start_values.items():
+        print(f"  {k}: {v}")
+
     print("Moving forward...")
     robot.Forward(50)
     time.sleep(2)
     robot.stop()
-    
-    # Get final values
+    time.sleep(0.2)
+
     end_values = {
         'RF': robot.get_encoder('RF'),
         'RB': robot.get_encoder('RB'),
         'LF': robot.get_encoder('LF'),
         'LB': robot.get_encoder('LB')
     }
-    
-    # Print changes
+    print("Final encoder values:")
+    for k, v in end_values.items():
+        print(f"  {k}: {v}")
+
     print("\nEncoder changes:")
     for motor in ['RF', 'RB', 'LF', 'LB']:
         change = end_values[motor] - start_values[motor]
         print(f"{motor}: {change}")
+    print("Encoder test complete.\n")
         
 def test_line_following(robot, oled_objects):
     print("\nTesting line following for 30 seconds...")
@@ -166,7 +180,7 @@ def test_line_following(robot, oled_objects):
             sensors = robot.read_line_sensors()
             sensor_bits = format(sensors, '05b')
             print(f"Sensors: {sensor_bits}", end='\r')
-            
+
             if all([disp, image, draw, font]):
                 draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=0)
                 draw.text((0, 0), "Line Following", font=font, fill=255)
@@ -175,8 +189,12 @@ def test_line_following(robot, oled_objects):
                 draw.text((0, 40), f"Time: {time_left:.1f}s", font=font, fill=255)
                 disp.image(image)
                 disp.show()
-            
-            if sensors & 0b00100:  # Center sensor
+
+            if sensors == 0:
+                print("\nNo line detected. Stopping test.")
+                robot.stop()
+                break
+            elif sensors & 0b00100:  # Center sensor
                 robot.move(speed=base_speed, turn=0)
             elif sensors & 0b00010:  # Left of center
                 robot.move(speed=base_speed-10, turn=-15)
@@ -188,7 +206,7 @@ def test_line_following(robot, oled_objects):
                 robot.move(speed=base_speed-15, turn=25)
             else:
                 robot.stop()
-            
+
             time.sleep(0.01)
             
     finally:
@@ -199,6 +217,7 @@ def test_line_following(robot, oled_objects):
         print("\nLine following test completed")
 
 def test_battery(robot, oled_objects):
+    global disp, image, draw, font
     print("\nTesting battery voltage...")
     try:
         disp, image, draw, font = oled_objects
@@ -262,6 +281,7 @@ def test_servos(robot, oled_objects):
     robot.set_servo(2, 90)
 
 def test_buzzer(robot, oled_objects):
+    global disp, image, draw, font
     print("\nPlaying Mario theme...")
     try:
         disp, image, draw, font = oled_objects
@@ -280,12 +300,53 @@ def test_buzzer(robot, oled_objects):
                 
         print("Melody completed!")
         
+
     except Exception as e:
         print(f"Error playing melody: {e}")
     finally:
         if all([disp, image, draw, font]):
             disp.fill(0)
             disp.show()
+
+def test_ultrasonic():
+    print("\nTesting Ultrasonic Sensors...")
+    ultrasonic = Ultrasonic(debug=True)
+    print("\nRaw distance readings (cm):")
+    for i in range(3):
+        left, front, right = ultrasonic.distances()
+        print(f"  Reading {i+1}: Left: {left if left else 'N/A'} | Front: {front if front else 'N/A'} | Right: {right if right else 'N/A'}")
+        time.sleep(1)
+    print("\nAveraged readings (cm):")
+    left, front, right = ultrasonic.distances(use_average=True, samples=5)
+    print(f"  Left: {left if left else 'N/A'} | Front: {front if front else 'N/A'} | Right: {right if right else 'N/A'}")
+    distance, direction = ultrasonic.get_closest_obstacle()
+    if distance:
+        print(f"Closest obstacle: {distance:.1f}cm to the {direction}")
+    else:
+        print("No obstacles detected")
+    print("\nPath clear test (30cm threshold):")
+    if ultrasonic.is_path_clear(30):
+        print("Path is clear for 30cm+")
+    else:
+        print("Path is blocked within 30cm")
+    ultrasonic.cleanup()
+    print("Ultrasonic sensor test complete.\n")
+
+def test_ir_sensor():
+    print("\nTesting IR Sensor...")
+    ir = IRsens(debug=True)
+    print("Reading IR sensor status for 5 seconds...")
+    start = time.time()
+    try:
+        while time.time() - start < 5:
+            status = ir.status()
+            print(f"IR Sensor Status: {'Obstacle' if status else 'Clear'}")
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nIR sensor test interrupted.")
+    finally:
+        ir.cleanup()
+        print("IR sensor test complete.\n")
 
 def main():
     robot = RobotController(wheel_diameter=98)
@@ -297,7 +358,7 @@ def main():
     try:
         while True:
             test_menu()
-            choice = input("\nSelect test (0-10): ")
+            choice = input("\nSelect test (0-12): ")
             
             if choice == '0':
                 break
@@ -321,6 +382,10 @@ def main():
                 test_servos(robot, oled_objects)
             elif choice == '10':
                 test_buzzer(robot, oled_objects)
+            elif choice == '11':
+                test_ultrasonic()
+            elif choice == '12':
+                test_ir_sensor()
             else:
                 print("Invalid choice!")
                 
@@ -335,7 +400,7 @@ def main():
         robot.set_servo(2, 90)
         time.sleep(0.5)
         
-        if all(oled_objects):
+        if all(oled_objects) and oled_objects[0] is not None:
             oled_objects[0].fill(0)
             oled_objects[0].show()
             

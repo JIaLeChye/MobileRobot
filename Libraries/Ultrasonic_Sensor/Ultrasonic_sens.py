@@ -1,6 +1,8 @@
 import RPi.GPIO as GPIO
 import time
 
+__version__ = "2.0.0"
+
 class Ultrasonic:
     """
     Improved class for ultrasonic distance sensors (HC-SR04 compatible).
