@@ -3,8 +3,6 @@ import time
 
 __version__ = "1.0.2"
 
-
-
 class IRsens:
     __init_check = False 
 
