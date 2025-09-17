@@ -1,25 +1,3 @@
-          # Function to update version in main library .py file (e.g., IRSens.py, Ultrasonic_sens.py, RPi_Robot_Hat_Lib.py)
-          update_mainlib_version() {
-            local file="$1"
-            local new_version="$2"
-            local updated=false
-            # Update __version__ if present
-            if grep -q '__version__' "$file"; then
-              sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
-              echo "✅ Updated __version__ to $new_version in $file"
-              updated=true
-            fi
-            # Update self.lib_ver if present (for RPi_Robot_Hat_Lib)
-            if grep -q 'self\.lib_ver= ' "$file"; then
-              sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
-              echo "✅ Updated self.lib_ver to $new_version in $file"
-              updated=true
-            fi
-            if [ "$updated" = true ]; then
-              return 0
-            fi
-            return 1
-          }
 name: Auto Update Library Versions
 
 on:
@@ -57,6 +35,29 @@ jobs:
       - name: Check for library changes and update versions
         run: |
           echo "🔍 Checking for meaningful library file changes..."
+          
+          # Function to update version in main library .py file (e.g., IRSens.py, Ultrasonic_sens.py, RPi_Robot_Hat_Lib.py)
+          update_mainlib_version() {
+            local file="$1"
+            local new_version="$2"
+            local updated=false
+            # Update __version__ if present
+            if grep -q '__version__' "$file"; then
+              sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${new_version}\"/" "$file"
+              echo "✅ Updated __version__ to $new_version in $file"
+              updated=true
+            fi
+            # Update self.lib_ver if present (for RPi_Robot_Hat_Lib)
+            if grep -q 'self\.lib_ver= ' "$file"; then
+              sed -i "s/self\.lib_ver= \"[^\"]*\"/self.lib_ver= \"${new_version}\"/" "$file"
+              echo "✅ Updated self.lib_ver to $new_version in $file"
+              updated=true
+            fi
+            if [ "$updated" = true ]; then
+              return 0
+            fi
+            return 1
+          }
           
           # Check if this commit was made by any bot (avoid infinite loops)
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
