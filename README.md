@@ -248,7 +248,7 @@ This project follows [Semantic Versioning](https://semver.org/) with **automatic
 #### Current Library Versions
 - **RPi_Robot_Hat_Lib**: 1.2.13
 - **Ultrasonic_sens**: 1.0.4
-- **IRSens**: 1.0.3
+- **IRSens**: 1.0.4
 
 #### Example Workflow
 ```bash

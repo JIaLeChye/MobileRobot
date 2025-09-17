@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO 
 import time 
 
-__version__ = "1.0.2"
+__version__ = "1.0.4"
 
 class IRsens:
     __init_check = False 
