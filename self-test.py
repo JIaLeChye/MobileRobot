@@ -7,6 +7,7 @@ import busio
 import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
 from picamera2 import Picamera2  
+import cv2
 
 
 # Mario tune notes (frequency in Hz)
@@ -34,8 +35,6 @@ def initialize_oled():
     except Exception as e:
         print(f"Error initializing OLED: {e}")
         return None, None, None, None
-
-
         
 def test_menu():
     print("\nRobot Test Menu:")
@@ -79,25 +78,57 @@ def test_i2C():
             print("No I2C devices found.")
     except Exception as e:
         print(f"I2C test error: {e}")
-
-
     print("I2C test completed.\n")
+
+
 def test_camera():
     print("\nTesting Camera...")
     picam2 = None
     try:
+        # Test 1: Picamera2 basic functionality
+        print("1. Testing Picamera2 basic functionality...")
         picam2 = Picamera2()
         picam2.start()
         time.sleep(2)  # Allow camera to warm up
         frame = picam2.capture_array()
         if frame is not None:
-            print("Camera test successful: Frame captured.")
+            print("   [PASS] Picamera2 test successful: Frame captured.")
+            print(f"   Frame shape: {frame.shape}")
         else:
-            print("Camera test failed: No frame captured.")
+            print("   [FAIL] Picamera2 test failed: No frame captured.")
+
+        # Test 2: OpenCV integration
+        print("2. Testing OpenCV integration...")
+        try:
+            # Convert frame to OpenCV format if we have a frame
+            if frame is not None:
+                # Convert RGB to BGR for OpenCV
+                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                print("   [PASS] OpenCV color conversion successful")
+                
+                # Test basic OpenCV operations
+                gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+                print(f"   [PASS] Grayscale conversion successful: {gray.shape}")
+                
+                # Test edge detection
+                edges = cv2.Canny(gray, 50, 150)
+                edge_count = cv2.countNonZero(edges)
+                print(f"   [PASS] Edge detection successful: {edge_count} edge pixels found")
+                
+                # Test basic image info
+                height, width = gray.shape
+                print(f"   [INFO] Image resolution: {width}x{height}")
+                print("   [PASS] OpenCV integration test successful")
+            else:
+                print("   [WARN] No frame available for OpenCV testing")
+        except ImportError:
+            print("   [FAIL] OpenCV (cv2) is not installed")
+        except Exception as opencv_error:
+            print(f"   [FAIL] OpenCV test error: {opencv_error}")
     except ImportError:
-        print("Picamera2 is not installed.")
+        print("[FAIL] Picamera2 is not installed.")
     except Exception as e:
-        print(f"Camera test error: {e}")
+        print(f"[FAIL] Camera test error: {e}")
     finally:
         if picam2 is not None:
             try:
@@ -107,6 +138,7 @@ def test_camera():
             except Exception as e:
                 print(f"Error closing camera: {e}")
         print("Camera test completed.\n")
+
 
 def test_OLED():
     global disp, image, draw, font
@@ -169,6 +201,9 @@ def test_basic_movements(robot):
 
 def test_distance_movement(robot, oled_objects):
     print("\nTesting distance movements...")
+    print("Resetting encoders to zero...")
+    robot.reset_encoders()
+    time.sleep(0.2)
     distance = float(input("Enter distance in meters: "))
     speed = int(input("Enter speed (1-100): "))
     
@@ -179,22 +214,37 @@ def test_distance_movement(robot, oled_objects):
         draw.text((0, 20), f"Speed: {speed}%", font=font, fill=255)
         disp.image(image)
         disp.show()
-    
     robot.move_distance(distance, speed)
     
 def test_square(robot):
     print("\nDriving in square pattern...")
     for _ in range(2):
+        print("Square loop iteration: ", _+1)
         # Move forward
+        print("Moving forward...")
         robot.Forward(30)
         time.sleep(2)
         robot.stop()
         time.sleep(0.5)
-        # Turn right
-        robot.move(speed=0, turn=30)
+        # Turn Right
+        print("Shifting right...")
+        robot.Horizontal_Right(30)  # Adjusted for right turn
         time.sleep(1)
         robot.stop()
         time.sleep(0.5)
+        # Move Backward
+        print("Moving backward...")
+        robot.Backward(30)
+        time.sleep(2)
+        robot.stop()
+        time.sleep(0.5)
+        # Turn left
+        print("Shifting left...")
+        robot.Horizontal_Left(30)  # Adjusted for left turn
+        time.sleep(1)
+        robot.stop()
+        time.sleep(0.5)
+
 
 def test_circle(robot):
     print("\nDriving in circle...")
@@ -362,9 +412,11 @@ def test_servos(robot, oled_objects):
         robot.set_servo(1, pos1)
         robot.set_servo(2, pos2)
         time.sleep(1)
-    
     robot.set_servo(1, 90)
     robot.set_servo(2, 90)
+    if all([disp, image, draw, font]):
+        disp.fill(0)
+        disp.show()
 
 def test_buzzer(robot, oled_objects):
     global disp, image, draw, font
