@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="rpi-robot-hat-lib",
-    version="1.2.13",
+    version="1.2.14",
     description="Raspberry Pi Robot Hat Library with encoder support",
     long_description="A comprehensive library for controlling Raspberry Pi robot hat with motor control, encoder feedback, sensor integration, and autonomous navigation capabilities.",
     long_description_content_type="text/plain",
