@@ -2,8 +2,14 @@
 
 # Variables
 
-USER_NAME=$(whoami)
-USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
+# Resolve the actual user even when run with sudo
+if [ -n "$SUDO_USER" ]; then
+    SERVICE_USER="$SUDO_USER"
+else
+    SERVICE_USER="$USER"
+fi
+# Resolve that user's home directory
+USER_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
 SERVICE_NAME="battery.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -13,9 +19,10 @@ BATTERY_SCRIPT=$(find "$SCRIPT_DIR" -maxdepth 2 -name "Battery.py" -print -quit)
 if [ -z "$BATTERY_SCRIPT" ]; then
     BATTERY_SCRIPT=$(find / -name "Battery.py" 2>/dev/null | head -n 1)
 fi
-STANDARD_OUTPUT="Battery_log.txt" 
-STANDARD_ERROR_OUTPUT="Battery_error_log.txt" 
-LOG_FILE_PATH="$USER_HOME/Desktop/Battery_Log" 
+# Log paths on Desktop to match user request and Battery.py cleanup
+STANDARD_OUTPUT="battery_log.txt"
+STANDARD_ERROR_OUTPUT="battery_error_log.txt"
+LOG_FILE_PATH="$USER_HOME/Desktop/Battery_Log"
 
 echo "User Directory is $USER_HOME"
 
@@ -48,24 +55,42 @@ sudo cp battery.service "$SERVICE_PATH" || {
     exit 1
 }
 
-# Update User name 
-echo "Updating User Name: $USER_NAME" 
-sudo sed -i "s|^User=.*|User=$USER_NAME|" "$SERVICE_PATH" || {
+echo "Ensuring required keys exist in service file (within [Service])..."
+# Insert missing keys immediately after the [Service] header to avoid placing them under [Install]
+if ! sudo grep -q '^User=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a User=$SERVICE_USER" "$SERVICE_PATH"
+fi
+if ! sudo grep -q '^WorkingDirectory=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a WorkingDirectory=$(dirname "$BATTERY_SCRIPT")" "$SERVICE_PATH"
+fi
+if ! sudo grep -q '^ExecStart=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a ExecStart=/usr/bin/python3 $BATTERY_SCRIPT" "$SERVICE_PATH"
+fi
+if ! sudo grep -q '^StandardOutput=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a StandardOutput=file:$LOG_FILE_PATH/$STANDARD_OUTPUT" "$SERVICE_PATH"
+fi
+if ! sudo grep -q '^StandardError=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a StandardError=file:$LOG_FILE_PATH/$STANDARD_ERROR_OUTPUT" "$SERVICE_PATH"
+fi
+
+# Update User name
+echo "Updating Service User: $SERVICE_USER"
+sudo sed -i "s|^User=.*|User=$SERVICE_USER|" "$SERVICE_PATH" || {
     echo "Error: Fail to modify Username in $SERVICE_PATH"
     exit 1
 }
 
-# Update ExecStart and WorkingDirectory in the service file
 echo "Updating service file at $SERVICE_PATH..."
-sudo sed -i "s|^ExecStart=.*|ExecStart=/usr/bin/python3 $BATTERY_SCRIPT|" "$SERVICE_PATH" || {
+# Update only within the [Service] section using sed range between [Service] and next section header
+sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^ExecStart=.*|ExecStart=/usr/bin/python3 $BATTERY_SCRIPT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update ExecStart in $SERVICE_PATH."
     exit 1
 }
-
-sudo sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")|" "$SERVICE_PATH" || {
+sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")|" "$SERVICE_PATH" || {
     echo "Error: Failed to update WorkingDirectory in $SERVICE_PATH."
     exit 1
 }
+
 
 # Update log file paths
 
@@ -75,13 +100,20 @@ echo "Updating log file paths..."
 
 if [ ! -d "$LOG_FILE_PATH" ]; then
     echo "Creating log directory: $LOG_FILE_PATH"
-    mkdir -p "$LOG_FILE_PATH" || {
+    sudo -u "$SERVICE_USER" mkdir -p "$LOG_FILE_PATH" || {
         echo "Error: Failed to create log directory."
         exit 1
     }
 else
     echo "Log folder exists: $LOG_FILE_PATH"
 fi
+
+# Ensure ownership so the service user can write logs
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_FILE_PATH" || true
+
+# Ensure log files exist and have correct ownership
+sudo -u "$SERVICE_USER" touch "$LOG_FILE_PATH/$STANDARD_OUTPUT" "$LOG_FILE_PATH/$STANDARD_ERROR_OUTPUT" || true
+sudo chown "$SERVICE_USER":"$SERVICE_USER" "$LOG_FILE_PATH/$STANDARD_OUTPUT" "$LOG_FILE_PATH/$STANDARD_ERROR_OUTPUT" || true
 
 sudo sed -i "s|^StandardOutput=.*|StandardOutput=file:$LOG_FILE_PATH/$STANDARD_OUTPUT|" "$SERVICE_PATH" || {
     echo "Error: Failed to update StandardOutput in $SERVICE_PATH."
@@ -94,21 +126,24 @@ sudo sed -i "s|^StandardError=.*|StandardError=file:$LOG_FILE_PATH/$STANDARD_ERR
 }
 
 # Verify the service file
-echo "Service file updated:"
-ls -l "$SERVICE_PATH"
+echo "Service file updated (showing contents):"
+sudo sed -n '1,120p' "$SERVICE_PATH"
+
+# Reload systemd daemon before enabling in case the unit was just updated
+echo "Reloading systemd daemon..."
+sudo systemctl daemon-reload || {
+    echo "Error: Failed to reload systemd daemon."
+    exit 1
+}
+
+echo "Unmasking service if masked..."
+sudo systemctl unmask "$SERVICE_NAME" || true
 
 sudo systemctl enable "$SERVICE_NAME" || {
     echo "Error: Failed to enable $SERVICE_NAME."
     exit 1
 }
 echo "$SERVICE_NAME enabled" 
-
-# Reload systemd daemon
-echo "Reloading systemd daemon..."
-sudo systemctl daemon-reload || {
-    echo "Error: Failed to reload systemd daemon."
-    exit 1
-}
 
 # Restart the service
 echo "Restarting ${SERVICE_NAME}..."

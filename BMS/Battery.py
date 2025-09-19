@@ -16,26 +16,6 @@ logger.setLevel(logging.DEBUG)
 # Create a log format with timestamp, level name, function name, and message
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
 
-# Create a rotating file handler to manage log size and keep old logs
-# Check is the log file exist, if not create new log file 
-
-# User_Directory = os.path.expanduser("~")
-# log_dir = os.path.join(User_Directory, "Battery_Log")
-# log_file = os.path.join(log_dir, "battery_log_Python.txt")
-
-# if not os.path.exists(log_file):
-#            # Create the directory if it doesn't exist
-#            os.makedirs(os.path.dirname(log_file), exist_ok=True)
-#            # Create empty log file
-#            with open(log_file, 'w') as f:
-#                pass  # Creates empty file
-#            print(f"Created new log file at: {log_file}")
-# else: 
-#     print("Log File location" + log_file)
-        
-# log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 5 backups
-# log_handler.setLevel(logging.DEBUG)
-# log_handler.setFormatter(formatter)
 
 # Create a stderr handler for error logs (critical and above)
 stderr_handler = logging.StreamHandler(sys.stderr)
@@ -52,6 +32,32 @@ stdout_handler.setFormatter(formatter)
 logger.addHandler(stderr_handler)
 logger.addHandler(stdout_handler)
 
+
+def clear_log_files():
+    """Truncate log files used by battery.service at startup to match systemd paths.
+    Uses the current user's home directory to align with the service's User setting.
+    """
+    try:
+        # Match service log locations on Desktop for the current user
+        home_dir = os.path.expanduser("~")
+        log_dir = os.path.join(home_dir, "Desktop", "Battery_Log")
+        stdout_log = os.path.join(log_dir, "battery_log.txt")
+        stderr_log = os.path.join(log_dir, "battery_error_log.txt")
+
+        # Ensure directory exists
+        os.makedirs(log_dir, exist_ok=True)
+        cleared = 0
+        for fpath in (stdout_log, stderr_log):
+            try:
+                # Truncate the file to zero length (create if missing)
+                open(fpath, 'w').close()
+                cleared += 1
+            except Exception as e:
+                logger.warning(f"Could not truncate log file {fpath}: {e}")
+        if cleared:
+            logger.info(f"Cleared {cleared} log file(s) in {log_dir}")
+    except Exception as e:
+        logger.warning(f"Log cleanup exception: {e}")
 
 
 robot = RobotController()
@@ -93,13 +99,83 @@ def Display_battery(battery_stat):
     time.sleep(1)
 
 
+# Graceful shutdown handler
+# systemd sends SIGTERM when you run: `systemctl stop battery.service`.
+# This handler exits the program immediately so that the `finally:` block below
+# can run and clean up hardware (clear OLED, stop buzzer, log shutdown, etc.).
+#
+# signum: the signal number (SIGTERM)
+# frame:  current stack frame (unused here)
 def handle_sigterm(signum, frame):
     sys.exit(0)
 
+# Register the handler so the script can exit cleanly when stopped by systemd
 signal.signal(signal.SIGTERM, handle_sigterm) 
+
+def battery_checker(battery_stat):
+        if USB_VOLTAGE < battery_stat <= LOW_BATTERY_TRESH:
+            logger.warning(f"Battery Low Voltage detected: {battery_stat}")
+            disp.fill(0)
+            disp.show()
+            # Clear the image buffer to avoid overlapping text
+            draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=0)
+            draw.text((0, 10), "LOW BATTERY!", font=font, fill=255)
+            draw.text((0, 20), "ROBOT WILL SHUTDOWN", font=font, fill=255)
+            draw.text((0, 30), "AT 10.5V", font=font, fill=255)
+            disp.image(image)
+            disp.show()
+            time.sleep(5)
+            for i in range(5):
+                robot.play_tone(2000, 1)
+                disp.fill(0)
+                disp.show()
+                time.sleep(0.2)
+                # Clear the image buffer before drawing the next frame
+                # Invert visuals for attention
+                draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=255)
+                draw.text((30, 30), "LOW BATTERY!", font=font, fill=0)
+                disp.image(image)
+                disp.show()
+                # time.sleep(1)
+            robot.cleanup_buzzer()
+            # time.sleep(CHECK_INTERVAL)
+            if USB_VOLTAGE < battery_stat <= 10.5: 
+                for i in range(5): 
+                    logger.warning(f"Shutting down due to low battery: {battery_stat}")
+                    disp.fill(0)
+                    disp.show()
+                    # Clear the image buffer before drawing the next frame
+                    # Invert visuals for attention
+                    draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=255)
+                    # Split into two lines to avoid any missing-space rendering issues
+                    draw.text((10, 20), "PLEASE", font=font, fill=0)
+                    draw.text((10, 35), "RECHARGE!", font=font, fill=0)
+                    draw.text((10, 50), f"VOLTAGE: {battery_stat}V", font=font, fill=0)
+                    disp.image(image)
+                    disp.show()
+                    time.sleep(10)
+                # Use passwordless sudo with absolute path for reliability under systemd
+                os.system("sudo -n /usr/sbin/shutdown -h now")
+        elif battery_stat <= USB_VOLTAGE:
+            logger.warning(f"USB Voltage detected: {battery_stat}")
+            # Clear the image buffer before drawing USB warning
+            draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=0)
+            draw.text((0, 10), "USB Voltage detected", font=font, fill=255)
+            draw.text((0, 20), f"VOLTAGE: {battery_stat}", font=font, fill=255)
+            draw.text((0, 30), "CAUTION!", font=font, fill=255)
+            draw.text((0, 40), "DO NOT START ", font=font, fill=255)
+            draw.text((0, 50), "MOTOR!", font=font, fill=255)
+            disp.image(image)
+            disp.show()
+        else:
+            Display_battery(battery_stat)
+            # time.sleep(1)
+
 
 def main():
     global font
+    # Clear existing log files at startup
+    clear_log_files()
     logger.debug("\n\n")
     logger.debug("/--------------------------/")
     logger.debug("-------Script Started-------")
@@ -109,56 +185,16 @@ def main():
     time.sleep(0.2)
     robot.play_tone(1000, 0.5)
     robot.cleanup_buzzer()
-    
     while True: 
         try:
-            battery_stat = robot.get_battery()
-            if USB_VOLTAGE < battery_stat <= LOW_BATTERY_TRESH:
-                logger.warning(f"Battery Low Voltage detected: {battery_stat}")
-                draw.text((0, 30), "LOW BATTERY!", font=font, fill=255)
-                draw.text((0, 40), "ROBOT WILL SHUTDOWN", font=font, fill=255)
-                draw.text((0, 50), "AT 10.5V", font=font, fill=255)
-                disp.image(image)
-                disp.show()
-                time.sleep(5)
-                for i in range(5):
-                    robot.play_tone(2000, 1)
-                    disp.fill(0)
-                    disp.show()
-                    time.sleep(0.2)
-                    draw.text((0, 30), "LOW BATTERY!", font=font, fill=255)
-                    disp.image(image)
-                    disp.show()
-                    # time.sleep(1)
-                robot.cleanup_buzzer()
-                time.sleep(CHECK_INTERVAL)
-                if USB_VOLTAGE < battery_stat <= 10.5: 
-                    for i in range(5): 
-                        logger.warning(f"Shutting down due to low battery: {battery_stat}")
-                        disp.fill(0)
-                        disp.show()
-                        draw.text((0, 30), "PLS RECHAGRE!", font=font, fill=255)
-                        draw.text((0,40), f"VOLTAGE: {battery_stat}", font=font, fill=255)
-                        disp.image(image)
-                        disp.show()
-                        time.sleep(10)
-                    os.system("sudo shutdown -h now")
-            elif battery_stat <= USB_VOLTAGE:
-                logger.warning(f"USB Voltage detected: {battery_stat}")
-                draw.text((0, 10), "USB Voltage detected", font=font, fill=255)
-                draw.text((0, 20), f"VOLTAGE: {battery_stat}", font=font, fill=255)
-                draw.text((0, 30), "CAUTION!", font=font, fill=255)
-                draw.text((0, 40), "DO NOT START ", font=font, fill=255)
-                draw.text((0, 50), "MOTOR!", font=font, fill=255)
-                disp.image(image)
-                disp.show()
-            else:
-                Display_battery(battery_stat)
-                # time.sleep(1)
+            battery_stat = robot.get_battery()  
+            battery_checker(battery_stat)
+            time.sleep(CHECK_INTERVAL)
         except Exception as e:
             logger.error(f"Failed to read battery or update display: {e}")
         
         time.sleep(CHECK_INTERVAL)
+            
 
 try:
     if __name__ == '__main__':

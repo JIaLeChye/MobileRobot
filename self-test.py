@@ -143,8 +143,8 @@ def test_camera():
 def test_OLED():
     global disp, image, draw, font
     print("\nTesting OLED display...")
+    # disp, image, draw, font = initialize_oled()
     try:
-        disp, image, draw, font = initialize_oled()
         if all([disp, image, draw, font]):
             draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=0)
             draw.text((0, 0), "OLED Test", font=font, fill=255)
@@ -495,9 +495,10 @@ def main():
     
     try:
         while True:
+            # print("Library versin: ", robot.__version__())
+            robot.__version__() 
             test_menu()
             choice = input("\nSelect test (0-15): ")
-            
             if choice == '0':
                 break
             elif choice == '1':
