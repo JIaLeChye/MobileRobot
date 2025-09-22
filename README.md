@@ -6,6 +6,16 @@
 
 
 A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with advanced computer vision, autonomous navigation, and remote control capabilities.
+## 📋 Table of Contents
+- [🚀 Features](#-features)
+- [⚡ Quick Start](#-quick-start)
+- [📁 Repository Structure](#-repository-structure)
+- [🔧 Installation](#-installation)
+- [📱 User Applications](#-user-applications)
+- [📚 Libraries](#-libraries)
+- [📖 Version Control & Changelog](#-version-control--changelog)
+- [📖 Documentation](#-documentation)
+- [📞 Support](#-support)
 
 ## 🚀 Features
 
@@ -25,19 +35,6 @@ A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with a
 - **Automatic Setup**: Self-downloading models and configuration files
 - **Per-Motor Calibration**: Individual motor tuning for improved accuracy
 
-## 📋 Table of Contents
-- [🚀 Features](#-features)
-- [⚡ Quick Start](#-quick-start)
-- [📁 Repository Structure](#-repository-structure)
-- [🔧 Installation](#-installation)
-- [📱 User Applications](#-user-applications)
-- [📚 Libraries](#-libraries)
-- [🤝 Contributing](#-contributing)
-- [📖 Version Control & Changelog](#-version-control--changelog)
-- [📖 Documentation](#-documentation)
-- [📄 License](#-license)
-- [🙏 Acknowledgments](#-acknowledgments)
-- [📞 Support](#-support)
 
 ## ⚡ Quick Start
 
@@ -83,14 +80,7 @@ cd Mobile_Controller/Mobile_Controller
 python3 Mobile_Controller.py
 ```
 
-### 📚 Understanding the Code
-
-- **Libraries/**: Core robot functionality - start here to understand the basics
-- **Examples/**: Each folder contains working examples with specific features
-- **Documentation**: Each folder has its own README with detailed explanations
-
 ### 🔧 Customization
-
 All examples are designed to be easily modified:
 1. Open any Python file in your favorite editor
 2. Modify parameters, thresholds, or behavior
@@ -111,7 +101,11 @@ The repository is organized by functionality to make it easy to explore:
 MobileRobot/
 ├── 📖 README.md                    # This file - start here!
 ├── ⚡ setup.sh                     # One-click installation script
-├── 📋 requirements.txt             # Python dependencies
+├── � reset.sh                     # System reset and cleanup script
+├── 🧪 self-test.py                 # Hardware validation and testing
+├── ⚙️ Encoder_Calibration.py       # Motor encoder calibration utility
+├── �📋 requirements.txt             # Python dependencies
+├── 📊 version.py                   # Version management and information
 │
 ├── 🚗 Motor_and_Encoder/           # Basic motor control with encoders
 ├── 🎯 Line_Following/              # Line following algorithms
@@ -122,9 +116,13 @@ MobileRobot/
 │   └── without_camera/             # Sensor-based avoidance
 ├── 👁️ Object_Tracking/             # Object detection and tracking
 │   ├── Color_Based/                # Color-based tracking
-│   └── KCF_Tracker/                # Advanced tracking algorithms
-├── 🤖 Object-Recognition(TF)/      # TensorFlow object recognition
+│   └── KCF_Tracler/                # Advanced KCF tracking algorithms
+├── 🎯 Object_Tracking_with_Avoidance/ # Combined tracking and navigation
+├── 🤖 Object-Recofnition(TF)/      # TensorFlow object recognition
+├── 🤖 Object-Recognition(TFLite)/  # TensorFlow Lite object recognition
 ├── 📱 Mobile_Controller/           # Remote control via mobile app
+│   ├── Mobile_Controller/          # Basic mobile control
+│   └── With_Obstacle_Alert/        # Enhanced control with obstacle detection
 ├── 👋 Hand-Gesture/                # Gesture-based control
 ├── 🏷️ April_Tag_Recognition/       # AprilTag detection and tracking
 ├── 📷 QR_Code_Recognition/         # QR code detection
