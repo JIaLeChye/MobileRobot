@@ -5,10 +5,6 @@ from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils 
 import object_detection as od_pkg
 
-# TensorFlow 2.x compatibility for TF1-style code used by Object Detection API utils
-if not hasattr(tf, 'gfile'):
-    tf.gfile = tf.io.gfile  # type: ignore
-
 ## Required files validation
 import os
 import tarfile
@@ -210,14 +206,11 @@ def object_detect():
                         break
 
 
-def main():
-    object_detect()
-
 
 
 try:
     if __name__ == '__main__':
-        main()
+        object_detect()
 
 except KeyboardInterrupt:
     pass

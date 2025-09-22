@@ -1,8 +1,7 @@
 import cv2
 import mediapipe as mp
 from picamera2 import Picamera2
-from libcamera import controls
-from libcamera import Transform
+from libcamera import controls, Transform 
 from RPi_Robot_Hat_Lib import RobotController
 
   
@@ -11,7 +10,7 @@ def init():
         """
         Initialize motor controller, encoder, mediapipe hands and camera 
         """
-        global mp_hands, hands, cap, mp_drawing, Motor, enc
+        global mp_hands, hands, cap, mp_drawing, Motor
         Motor = RobotController()
         # Initialize MediaPipe Hands
         mp_hands = mp.solutions.hands
@@ -84,7 +83,7 @@ def control_car(hand_landmarks):
 
 def main():
         init()
-        global mp_hands, hands, cap, mp_drawing, Motor, enc 
+        global mp_hands, hands, cap, mp_drawing, Motor
         # Main loop for robot car control
         while True:
                 # Read frame from video capture
@@ -94,7 +93,6 @@ def main():
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 # Detect hand landmarks using MediaPipe Hands
                 results = hands.process(frame_bgr)
-                # enc.encoder()
 
                 # Draw hand landmarks on the frame
                 if results.multi_hand_landmarks:
@@ -120,6 +118,5 @@ try:
 except KeyboardInterrupt:
         cv2.destroyAllWindows()
         Motor.cleanup()
-        # enc.stop()
-
+   
 

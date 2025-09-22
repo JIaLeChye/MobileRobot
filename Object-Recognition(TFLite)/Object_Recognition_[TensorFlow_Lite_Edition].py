@@ -11,6 +11,9 @@ from libcamera import controls, Transform
 
 ## For validation of the model and label files 
 import os
+import urllib.request
+import shutil
+import errno
 
 ## To get the accurate time 
 import time 
@@ -19,27 +22,75 @@ import time
 from RPi_Robot_Hat_Lib import RobotController 
 # Verify the model and label files
 model_folder = 'tensorflow_lite_examples'
-model_file = '/mobilenet_v2.tflite'
-model_path = model_folder + model_file
-label_file = '/coco_labels.txt'
-label_path = model_folder + label_file
+model_file = 'mobilenet_v2.tflite'
+model_path = os.path.join(model_folder, model_file)
+label_file = 'coco_labels.txt'
+label_path = os.path.join(model_folder, label_file)
 
-if not os.path.exists(model_path):
-    print("Model file not found")
-    exit()
-else:
-    print("Model file found at:", model_path)
+# Remote base URL (raw GitHub)
+remote_base = 'https://github.com/raspberrypi/picamera2/raw/main/examples/tensorflow'
 
-if not os.path.exists(label_path):
-    print("Label file not found")
-    exit()
-else:
-    print("Label file found at:", label_path)
+def ensure_dir_exists(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+def download_if_missing(local_path, remote_name):
+    """Download remote_name from remote_base to local_path if it doesn't exist."""
+    if os.path.exists(local_path):
+        print(f"Found: {local_path}")
+        return True
+
+    ensure_dir_exists(os.path.dirname(local_path))
+    remote_url = f"{remote_base}/{remote_name}"
+    print(f"File not found locally: {local_path}\nAttempting to download from: {remote_url}")
+    try:
+        with urllib.request.urlopen(remote_url) as response, open(local_path, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+        print(f"Downloaded {remote_name} to {local_path}")
+        return True
+    except Exception as e:
+        print(f"Failed to download {remote_name}: {e}")
+        return False
+
+# Ensure both files exist (try download if missing)
+ok_model = download_if_missing(model_path, model_file)
+ok_label = download_if_missing(label_path, label_file)
+
+if not ok_model:
+    print("Model file missing and could not be downloaded. Exiting.")
+    exit(1)
+
+if not ok_label:
+    print("Label file missing and could not be downloaded. Exiting.")
+    exit(1)
 
 # Decode the label file
-with open(label_path, 'r') as f:
-    lines = f.readlines()
-    labels = {int(line.strip().split(maxsplit=1)[0]): line.strip().split(maxsplit=1)[1] for line in lines}
+def load_labels(path):
+    labels = {}
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(maxsplit=1)
+            if len(parts) == 2:
+                try:
+                    idx = int(parts[0])
+                    labels[idx] = parts[1]
+                except ValueError:
+                    # Not starting with index, try to use incremental indexing
+                    pass
+            else:
+                # If the file doesn't contain numeric prefixes, build a list-like mapping
+                # keep adding with next index
+                next_idx = max(labels.keys()) + 1 if labels else 0
+                labels[next_idx] = parts[0]
+    return labels
+
+labels = load_labels(label_path)
 
 
 ## Initialise the Motor Controler Library 
@@ -132,4 +183,3 @@ except KeyboardInterrupt:
     Motor.cleanup()
     print("Exiting")
     exit()
-

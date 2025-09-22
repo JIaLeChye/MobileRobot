@@ -12,6 +12,8 @@ class RobotController:
         
         config_dir = os.path.expanduser("~/.config/mobile_robot")
         calib_path = os.path.join(config_dir, f"calibration_{motor}.json")
+        os.makedirs(config_dir, exist_ok=True)
+        
         if os.path.exists(calib_path):
             try:
                 with open(calib_path, "r") as f:
@@ -19,6 +21,9 @@ class RobotController:
                 return data.get("ticks_per_rev"), data.get("calibration_factor")
             except Exception as e:
                 print(f"Error loading calibration for {motor}: {e}")
+        else:
+            if self.debug:
+                print(f"No calibration file found for {motor} at {calib_path}")
         return None, None
 
     def __init__(self, wheel_diameter=100, debug=False):  # diameter in mm
@@ -175,48 +180,48 @@ class RobotController:
         self.move(0, -speed)  # Use existing move function with negative turn
 
     def Horizontal_Left(self, speed):
-        """Move Horizontal Left with specified spedd (0 - 100)"""
+        """Strafe left with specified speed (0–100)."""
         self.set_motor('LF', -abs(speed))
         self.set_motor('RF', abs(speed))
         self.set_motor('LB', abs(speed))
         self.set_motor('RB', -abs(speed))
     
     def Horizontal_Right(self, speed):
-        """Move Horizontal Right with specified spedd (0 - 100)"""
+        """Strafe right with specified speed (0–100)."""
         self.set_motor('LF', abs(speed))
         self.set_motor('RF', -abs(speed))
         self.set_motor('LB', -abs(speed))
         self.set_motor('RB', abs(speed))
     
     def set_motor(self, motor, speed):
-       """Set motor speed (-100 to 100)"""
-       motor_registers = {
-           'RF': self.REG_MOTOR_RF,
-           'RB': self.REG_MOTOR_RB,
-           'LF': self.REG_MOTOR_LF,
-           'LB': self.REG_MOTOR_LB
-       }
-       
-       speed = max(-100, min(100, speed))
-       if speed >= 0:
-           byte_value = int(speed * 127 / 100)
-       else:
-           byte_value = 256 + int(speed * 127 / 100)
-           
-       try:
-           self._write_byte(motor_registers[motor], byte_value)
-       except Exception as e:
-           print(f"Error setting motor speed: {e}")
-           self.stop() # Stop all Motor
+        """Set motor speed for one motor (-100..100)."""
+        motor_registers = {
+            'RF': self.REG_MOTOR_RF,
+            'RB': self.REG_MOTOR_RB,
+            'LF': self.REG_MOTOR_LF,
+            'LB': self.REG_MOTOR_LB
+        }
+
+        speed = max(-100, min(100, speed))
+        if speed >= 0:
+            byte_value = int(speed * 127 / 100)
+        else:
+            byte_value = 256 + int(speed * 127 / 100)
+
+        try:
+            self._write_byte(motor_registers[motor], byte_value)
+        except Exception as e:
+            print(f"Error setting motor speed: {e}")
+            self.stop()  # Stop all motors
     ##########################################
 
 
     ##-----------Encoder Section------------##
     def get_encoder(self, motor, debug=False):
         """Get encoder count for a specific motor
-        Parms:
-            motor: 'RF', 'RB', 'LF', 'LB'
-            debug: If True, print debug information
+        Args:
+            motor (str): one of 'RF', 'RB', 'LF', 'LB'
+            debug (bool): If True, print debug information
         Returns:
             Encoder count as signed integer
         """
@@ -253,17 +258,15 @@ class RobotController:
             return 0
         
     def get_encoder_delta(self, motor, debug=False):
-         """
-        Get the encoder delta (change) since the last read,
-        with wraparound handling and direction correction for left motors.
-        
-        Args:
-            motor (str): One of 'RF', 'RB', 'LF', 'LB'
-            debug (bool): Enable debug output
+         """Get encoder delta since last read with wraparound and left-motor sign correction.
 
-        Returns:
-            int: Signed delta (positive for forward)
-        """
+         Args:
+             motor (str): One of 'RF', 'RB', 'LF', 'LB'
+             debug (bool): Enable debug output
+
+         Returns:
+             int: Signed delta (positive for forward)
+         """
          if motor not in ['RF', 'RB', 'LF', 'LB']:
             print("Invalid motor. Choose from 'RF', 'RB', 'LF', 'LB'.")
             return 0
@@ -295,13 +298,12 @@ class RobotController:
          return delta
     
     def get_rpm(self, motor, debug=False):
-     """
-     Calculate RPM for a specific motor with wraparound-safe encoder delta.
- 
+     """Calculate RPM for a specific motor with wraparound-safe encoder delta.
+
      Args:
          motor (str): One of 'RF', 'RB', 'LF', 'LB'
          debug (bool): If True, print debug info
- 
+
      Returns:
          float: RPM (positive for forward, negative for reverse)
      """
@@ -428,9 +430,9 @@ class RobotController:
         }
  
     def move_distance(self, distance, speed=40, debug=False):
-        """Move the robot a specific distance in meters with wraparound-safe tracking"""
+        """Move the robot a specific distance in meters with wraparound-safe tracking."""
         print(f"\nMoving {distance:.2f} meters at speed {speed}")
-        debug = self.debug 
+        debug = self.debug
         direction = 1 if distance >= 0 else -1
         speed = abs(speed) * direction
         target_distance = abs(distance)
@@ -502,9 +504,9 @@ class RobotController:
         time.sleep(0.2)
 
         # Final distance report
-        final_distances = {m: self.get_distance(m) for m in valid_motors}
-        final_avg = sum(final_distances[m] for m in valid_motors) / len(valid_motors)
-        
+        final_distances = {m: self.get_distance(m) for m in valid_motors} if valid_motors else {}
+        final_avg = (sum(final_distances[m] for m in valid_motors) / len(valid_motors)) if valid_motors else 0
+
         print("Movement completed.")
         print(f"Final distance: {final_avg * 100:.1f}cm")
         return final_avg
@@ -603,7 +605,7 @@ class RobotController:
     ##########################################
 
 
-    ##--------Clean Up anb Stop Section--------##
+    ##--------Clean Up and Stop Section--------##
     def stop(self):
         """Stop all motors"""
         for motor in ['RF', 'RB', 'LF', 'LB']:
@@ -663,6 +665,7 @@ if __name__ == "__main__":
         #     time.sleep(0.3)
         # # robot.calibrate_distance(mode='freewheel', actual_distance_cm=10, motor='LF')
     except KeyboardInterrupt:
+        
         print("Interrupted by user")
     finally:
         robot.cleanup()

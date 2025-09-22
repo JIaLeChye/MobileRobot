@@ -72,6 +72,10 @@ fi
 if ! sudo grep -q '^StandardError=' "$SERVICE_PATH"; then
     sudo sed -i "/^\[Service\]/a StandardError=file:$LOG_FILE_PATH/$STANDARD_ERROR_OUTPUT" "$SERVICE_PATH"
 fi
+if ! sudo grep -q '^Environment=BATTERY_LOG_DIR=' "$SERVICE_PATH"; then
+    sudo sed -i "/^\[Service\]/a Environment=BATTERY_LOG_DIR=$LOG_FILE_PATH" "$SERVICE_PATH"
+fi
+
 
 # Update User name
 echo "Updating Service User: $SERVICE_USER"
@@ -88,6 +92,10 @@ sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^ExecStart=.*|ExecStart=/usr/bin/python3 
 }
 sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^WorkingDirectory=.*|WorkingDirectory=$(dirname "$BATTERY_SCRIPT")|" "$SERVICE_PATH" || {
     echo "Error: Failed to update WorkingDirectory in $SERVICE_PATH."
+    exit 1
+}
+sudo sed -i "s|^Environment=BATTERY_LOG_DIR=.*|Environment=BATTERY_LOG_DIR=$LOG_FILE_PATH|" "$SERVICE_PATH" || {
+    echo "Error: Failed to update BATTERY_LOG_DIR in $SERVICE_PATH."
     exit 1
 }
 

@@ -10,18 +10,20 @@ A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with a
 ## 🚀 Features
 
 ### Core Functionality
-- **Motor Control**: Precise 4-wheel mecanum drive control with encoder feedback
-- **Computer Vision**: Object tracking, recognition, and QR/AprilTag detection
+- **Motor Control**: Precise 4-wheel mecanum drive control with enhanced encoder feedback and calibration
+- **Computer Vision**: Object tracking, recognition, and QR/AprilTag detection with automatic model downloads
 - **Autonomous Navigation**: Line following and obstacle avoidance
 - **Remote Control**: Mobile app integration via Blynk platform
 - **Sensor Integration**: Ultrasonic, IR, line sensors, and camera
-- **Real-time Monitoring**: OLED display and battery management
+- **Real-time Monitoring**: OLED display and advanced battery management system
 
 ### Advanced Capabilities
 - **Hand Gesture Control**: OpenCV-based gesture recognition
-- **TensorFlow Integration**: Object detection and classification
+- **TensorFlow Integration**: Object detection and classification with automatic setup
 - **Multiple Navigation Modes**: Sensor-based and vision-based navigation
 - **Hardware Abstraction**: Clean API for all robot functions
+- **Automatic Setup**: Self-downloading models and configuration files
+- **Per-Motor Calibration**: Individual motor tuning for improved accuracy
 
 ## 📋 Table of Contents
 - [Quick Start](#quick-start)
@@ -244,6 +246,29 @@ We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTIN
 This project follows [Semantic Versioning](https://semver.org/) with **automatic version management**:
 - **Major.Minor.Patch** (e.g., 1.2.3)
 
+### 🆕 Recent Updates (Version 2.1.0)
+
+#### New Features & Improvements
+- **🤖 Enhanced Object Recognition**: Added automatic model and label file download functionality
+  - **TensorFlow Lite**: `download_if_missing()` and `ensure_dir_exists()` functions for automatic model setup
+  - **TensorFlow (Full)**: `ensure_model_present()` and `ensure_label_map_present()` functions
+  - **Auto-Download**: Missing model files are automatically downloaded from GitHub repositories
+  - **Robust Error Handling**: Better error messages and fallback mechanisms for network issues
+
+- **⚙️ Enhanced Motor Control**: Improved motor calibration and distance tracking
+  - **Per-Motor Calibration**: Individual motor calibration data storage in `~/.config/mobile_robot/`
+  - **Encoder Calibration Tool**: New `Encoder_Calibration.py` for precise distance measurements
+  - **Improved Accuracy**: Better encoder handling and distance calculations
+
+- **🔋 Battery Management System**: Enhanced monitoring and logging capabilities
+  - **Advanced Logging**: Structured logging system with timestamps and function names
+  - **System Service**: Battery monitoring can run as a systemd service
+  - **OLED Display**: Real-time battery status display integration
+
+- **🛠️ Development Improvements**: Better testing and validation
+  - **Enhanced Self-Test**: Improved camera and I2C device testing
+  - **OpenCV Integration**: Better camera testing with OpenCV functionality
+  - **Error Detection**: More comprehensive hardware validation
 
 #### Current Library Versions
 - **RPi_Robot_Hat_Lib**: 1.2.14
@@ -279,7 +304,11 @@ git commit -m "Major update: Add new movement algorithms"
 - **Flexible control** - Manual override for major/minor versions
 - **Clear history** - Version changes are tracked in Git commits
 
-### Current Version: 2.0.0
+### Current Version: 2.1.0
+- ✅ **Automatic Model Downloads**: Object recognition systems now automatically download required files
+- ✅ **Enhanced Motor Calibration**: Per-motor calibration with improved accuracy
+- ✅ **Advanced Battery Monitoring**: Comprehensive logging and system service integration
+- ✅ **Improved Testing**: Enhanced self-test capabilities with camera and I2C validation
 - ✅ Raspberry Pi 5 compatibility
 - ✅ Enhanced setup automation
 - ✅ Comprehensive self-check system
@@ -318,7 +347,3 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 - **Issues**: [GitHub Issues](https://github.com/JIaLeChye/MobileRobot/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/JIaLeChye/MobileRobot/discussions)
 - **Wiki**: [Project Wiki](https://github.com/JIaLeChye/MobileRobot/wiki)
-
----
-
-**Made with ❤️ for the robotics community**

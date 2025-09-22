@@ -14,7 +14,7 @@ def init():
     picamera2.Picamera2
         The initialized Picamera2 object.
     """
-    global picam2, horizontal, vertical, frame_center, Motor, enc
+    global picam2, horizontal, vertical, frame_center, Motor
     # Initialise the Motor
     Motor = RobotController()
     

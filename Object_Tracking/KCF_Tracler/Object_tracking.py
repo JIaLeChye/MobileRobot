@@ -6,9 +6,6 @@ from libcamera import controls, Transform
 import time
 
 tracker = cv2.TrackerKCF_create() 
-# cap = cv2.VideoCapture(0)
-# frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-# frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_width = 640  
 frame_height = 480
 cap = Picamera2()
@@ -90,7 +87,7 @@ def main():
             (x, y, w, h) = [int(v) for v in box]
             tracking(frame, x,y,w,h)
         else:
-            cv2.putText(frame, "Tracking failure", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(frame, "Tracking failure", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2) 
             Motor.Brake() 
         cv2.imshow('Tracking_Area', frame)
         

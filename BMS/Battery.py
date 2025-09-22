@@ -19,7 +19,7 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(me
 
 # Create a stderr handler for error logs (critical and above)
 stderr_handler = logging.StreamHandler(sys.stderr)
-stderr_handler.setLevel(logging.ERROR)
+stderr_handler.setLevel(logging.WARNING)
 stderr_handler.setFormatter(formatter)
 
 # Create a stdout handler for debug and info logs
@@ -34,34 +34,33 @@ logger.addHandler(stdout_handler)
 
 
 def clear_log_files():
-    """Truncate log files used by battery.service at startup to match systemd paths.
-    Uses the current user's home directory to align with the service's User setting.
+    """Truncate system log file (battery_log.txt) at startup.
+    Log path is determined by the BATTERY_LOG_DIR environment variable.
     """
     try:
-        # Match service log locations on Desktop for the current user
-        home_dir = os.path.expanduser("~")
-        log_dir = os.path.join(home_dir, "Desktop", "Battery_Log")
-        stdout_log = os.path.join(log_dir, "battery_log.txt")
-        stderr_log = os.path.join(log_dir, "battery_error_log.txt")
+        log_dir = os.environ.get('BATTERY_LOG_DIR')
+        if not log_dir:
+            logger.error("BATTERY_LOG_DIR environment variable not set.")
+            raise RuntimeError("BATTERY_LOG_DIR environment variable not set.")
 
-        # Ensure directory exists
-        os.makedirs(log_dir, exist_ok=True)
+        stdout_log = os.path.join(log_dir, "battery_log.txt")
         cleared = 0
-        for fpath in (stdout_log, stderr_log):
-            try:
-                # Truncate the file to zero length (create if missing)
-                open(fpath, 'w').close()
-                cleared += 1
-            except Exception as e:
-                logger.warning(f"Could not truncate log file {fpath}: {e}")
+        try:
+            open(stdout_log, 'w').close()
+            cleared += 1
+        except Exception as e:
+            logger.warning(f"Could not truncate log file {stdout_log}: {e}")
+
         if cleared:
             logger.info(f"Cleared {cleared} log file(s) in {log_dir}")
     except Exception as e:
         logger.warning(f"Log cleanup exception: {e}")
 
 
+
 robot = RobotController()
 LOW_BATTERY_TRESH = 11
+SHUTDOWN_VOLTAGE = 10.5
 USB_VOLTAGE = 5
 CHECK_INTERVAL = 30
 
@@ -139,7 +138,7 @@ def battery_checker(battery_stat):
                 # time.sleep(1)
             robot.cleanup_buzzer()
             # time.sleep(CHECK_INTERVAL)
-            if USB_VOLTAGE < battery_stat <= 10.5: 
+            if USB_VOLTAGE < battery_stat <= SHUTDOWN_VOLTAGE: 
                 for i in range(5): 
                     logger.warning(f"Shutting down due to low battery: {battery_stat}")
                     disp.fill(0)
@@ -173,7 +172,6 @@ def battery_checker(battery_stat):
 
 
 def main():
-    global font
     # Clear existing log files at startup
     clear_log_files()
     logger.debug("\n\n")
@@ -192,24 +190,22 @@ def main():
             time.sleep(CHECK_INTERVAL)
         except Exception as e:
             logger.error(f"Failed to read battery or update display: {e}")
-        
-        time.sleep(CHECK_INTERVAL)
+        # time.sleep(CHECK_INTERVAL)
             
 
 try:
     if __name__ == '__main__':
         main() 
-
 except KeyboardInterrupt:
     robot.cleanup()  
     disp.fill(0)
     disp.show() 
-    logger.warning("Program Exit: User Interupt")
+    logger.warning("Program Exit: User Interrupt")
 except Exception as e:
-    logger.error(f"An error occurred: {e}") 
-
+    logger.error(f"An error occurred: {e}")     
 finally:
     disp.fill(0)
     disp.show() 
     logger.info("Script Ended")
+    robot.cleanup() 
     exit()
