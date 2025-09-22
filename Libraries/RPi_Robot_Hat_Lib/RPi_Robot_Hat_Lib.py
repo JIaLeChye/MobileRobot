@@ -5,26 +5,32 @@ import RPi.GPIO as GPIO
 import os, json
 
 class RobotController:
-    def load_motor_calibration(self, motor):
+    def load_motor_calibration(self, debug=False):
         """
-        Load per-motor calibration data if available. Returns (ticks_per_rev, calibration_factor) or (None, None) if not found.
+        Load per-motor calibration data if available. Returns (calibration_factor) or (None) if not found.
         """
         
         config_dir = os.path.expanduser("~/.config/mobile_robot")
-        calib_path = os.path.join(config_dir, f"calibration_{motor}.json")
+        calib_path = os.path.join(config_dir, f"calibration.json")
         os.makedirs(config_dir, exist_ok=True)
-        
         if os.path.exists(calib_path):
+            if debug or self.debug:
+                print(f"Loading calibration from {calib_path}")
             try:
                 with open(calib_path, "r") as f:
                     data = json.load(f)
-                return data.get("ticks_per_rev"), data.get("calibration_factor")
+                    calibration_data = data.get("calibration_factor")
+                    calibration_time = data.get("date")
+                    if debug or self.debug:
+                        print(f"Loaded calibration factor: {calibration_data}")
+                        print(f"Calibration date: {calibration_time}")
+                return calibration_data
             except Exception as e:
-                print(f"Error loading calibration for {motor}: {e}")
+                print(f"Error loading calibration : {e}")
         else:
-            if self.debug:
-                print(f"No calibration file found for {motor} at {calib_path}")
-        return None, None
+            if debug or self.debug:
+                print(f"No calibration file found  at {calib_path}")
+        return None
 
     def __init__(self, wheel_diameter=100, debug=False):  # diameter in mm
         # Setup I2C communication
@@ -40,7 +46,7 @@ class RobotController:
         self.GEAR_RATIO = 30
         self.ENCODER_PPR = 13
         self.TICKS_PER_REV = self.ENCODER_PPR * self.GEAR_RATIO * 4 # 4x quadrature encoding
-        self.calibration_factor = 2 # Calibration factor
+        self.CALIBRATION_FACTOR = 2 # Calibration factor
         
         # Register addresses
         self.REG_MOTOR_RF = 1
@@ -392,13 +398,13 @@ class RobotController:
             self.total_ticks[motor] += delta_ticks
 
             # Load calibration if available
-            # ticks_per_rev, cal_factor = self.load_motor_calibration(motor)
-            # if ticks_per_rev is None:
-            #     ticks_per_rev = self.TICKS_PER_REV
-            # if cal_factor is None:
-            #     cal_factor = self.calibration_factor
+            cal_factor = self.load_motor_calibration()
+            
             ticks_per_rev = self.TICKS_PER_REV
-            cal_factor = self.calibration_factor
+            if cal_factor is None:
+                cal_factor = self.CALIBRATION_FACTOR
+            # ticks_per_rev = self.TICKS_PER_REV
+            # cal_factor = self.CALIBRATION_FACTOR
 
             # Wheel distance per revolution
             wheel_circumference = self.WHEEL_CIRCUMFERENCE  # in meters
@@ -410,6 +416,7 @@ class RobotController:
                 print(f"\n=== DEBUG: get_distance('{motor}') ===")
                 print(f"Delta ticks : {delta_ticks}")
                 print(f"Total ticks : {self.total_ticks[motor]}")
+                print(f"Calibration : {cal_factor}")
                 print(f"Revolutions : {revolutions}")
                 print(f"Distance    : {distance_m:.4f} meters")
                 print("========================================\n")
@@ -450,7 +457,7 @@ class RobotController:
         stall_counter = 0
         max_stall_count = 10
 
-        stopping_distance = max(0.01, abs(speed) * 0.0005)
+        stopping_distance = max(0.05, abs(speed) * 0.00099)
         effective_target = target_distance - stopping_distance
         valid_motors = []
         while True:
@@ -652,18 +659,19 @@ if __name__ == "__main__":
         speed = 60  # speed percentage
         robot.play_tone(440, 1)  # Play A4 for 1 second
         # robot.move_distance(1.0, speed=40)  # Move forward 1 meter at speed 40
-        robot.reset_encoders(debug=False)
-        robot.move_distance(distance, speed, debug=True)
+        robot.load_motor_calibration(debug=True)
+        robot.get_distance('LF', debug=True)
+        # robot.reset_encoders(debug=False)
+        # robot.move_distance(distance, speed, debug=True)
         
-        # while True:
-        #     # motor = 'LF'
-        #     # robot.set_motor(motor, 50)
-        #     # enc_value = robot.get_encoder('LF')
-        #     delta_rf = 
-        #     # delta_lf = robot.get_encoder_delta('LF', debug=True)
-        #     # print(f"Left Front Encoder: {enc_value}")
-        #     time.sleep(0.3)
-        # # robot.calibrate_distance(mode='freewheel', actual_distance_cm=10, motor='LF')
+        while True:
+            motor = 'RF'
+            robot.set_motor(motor, 50)
+            enc_value = robot.get_encoder(motor, debug=True)
+            # delta_lf = robot.get_encoder_delta('LF', debug=True)
+            distance = robot.get_distance(motor, debug=True)
+            print(f"Left Front Encoder: {enc_value}")
+            time.sleep(0.3)
     except KeyboardInterrupt:
         
         print("Interrupted by user")

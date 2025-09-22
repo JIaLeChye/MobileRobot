@@ -4,172 +4,135 @@ import time
 import RPi_Robot_Hat_Lib
 import json
 
+
 robot = RPi_Robot_Hat_Lib.RobotController()
-def calibrate_distance(mode='freewheel', actual_distance_cm= 10, motor='ALL', rotations=10):
+
+def load_calibration_data():
     """
-    Run calibration procedure with option for on-ground or freewheel calibration.
-    Can calibrate a single motor (by counting rotations) or all motors (average distance).
-    Uses default values for all arguments, so no Optional typing is needed.
+    Load calibration data from ~/.config/mobile_robot/calibration.json.
+    Returns a dictionary with calibration data if found, empty dict otherwise.
+    """
+    config_dir = os.path.expanduser("~/.config/mobile_robot")
+    calibration_data = {}
+    
+    # Load overall system calibration
+    overall_calib_path = os.path.join(config_dir, "calibration.json")
+    if os.path.exists(overall_calib_path):
+        try:
+            with open(overall_calib_path, "r") as f:
+                calibration_data = json.load(f)
+                print(f"Loaded calibration from {overall_calib_path}")
+        except Exception as e:
+            print(f"[ERROR] Failed to load calibration: {e}")
+    
+    return calibration_data
+
+def display_calibration_status():
+    """Display current calibration status."""
+    print("\n=== Calibration Status ===")
+    calib_data = load_calibration_data()
+    
+    if calib_data:
+        print(f"Calibration Factor: {calib_data.get('calibration_factor', 'N/A')}")
+        print(f"Actual Distance: {calib_data.get('actual_distance_m', 'N/A')}m")
+        print(f"Measured Distance: {calib_data.get('measured_distance_m', 'N/A')}m")
+        print(f"Last Calibrated: {calib_data.get('timestamp', 'N/A')}")
+    else:
+        print("No calibration data found.")
+        print("Run calibration to create calibration data.")
+    
+    print("=========================\n")
+
+def calibrate_distance(actual_distance_m=1.0):
+    """
+    Run on-ground calibration procedure for the entire robot.
+    Uses the move_distance function to move precisely and get accurate measurements.
     Saves calibration factor to ~/.config/mobile_robot/calibration.json (always overwrites).
     Args:
-        mode: 'on-ground' or 'freewheel'. Defaults to 'freewheel'.
-        actual_distance_cm: The measured distance in cm. Defaults to 10.
-        motor: 'ALL' for all motors, or a specific motor ('LF', 'RF', 'LB', 'RB'). Defaults to 'ALL'.
-        rotations: Number of wheel rotations for single motor calibration. Defaults to 10.
+        actual_distance_m: The measured distance in meters. Defaults to 0.10 (10cm).
     """
     
     print("\nDistance Calibration Tool")
-    mode = mode.lower() if isinstance(mode, str) else 'freewheel'
-    if mode not in ['on-ground', 'freewheel']:
-        print("Invalid mode argument, defaulting to 'freewheel'.")
-        mode = 'freewheel'
-    if isinstance(motor, str) and motor.upper() in ['LF', 'RF', 'LB', 'RB']:
-        # Single motor calibration (robot moves the motor, user counts cycles)
-        motor = motor.upper()
-        robot.reset_encoders()
-        print(f"\nSingle Motor Calibration Selected for {motor}.")
-        print(robot.get_encoder(motor))
-        print("The robot will move the specified motor at a constant speed.")
-        print("Please count the number of full wheel cycles (rotations) and enter the actual number after the motor stops.")
-        print("Ensure the robot is elevated so the wheel can spin freely without touching the ground.")
-        print("You may want to mark the wheel with tape to help count rotations.")
-        # Load and display previous calibration if available
-        prev_ticks_per_rev, prev_cal_factor = robot.load_motor_calibration(motor)
-        if prev_ticks_per_rev is not None and prev_cal_factor is not None:
-            print(f"Previous calibration for {motor}:\n  Ticks per rev: {prev_ticks_per_rev:.2f}\n  Calibration factor: {prev_cal_factor:.5f}")
-        else:
-            print(f"No previous calibration found for {motor}.")
-        print("Resetting encoder...")
-        max_reset_attempts = 3
-        for reset_attempt in range(max_reset_attempts):
-            robot.reset_encoders()
-            # Wait and confirm encoder is zero
-            reset_val = None
-            for attempt in range(20):
-                time.sleep(0.05)
-                reset_val = robot.get_encoder(motor)
-                if reset_val == 0:
-                    break
-            if reset_val == 0:
-                break
-            print(f"[WARNING] Encoder for {motor} did not reset to zero after reset attempt {reset_attempt+1} (value: {reset_val}). Retrying...")
-        else:
-            print(f"[ERROR] Encoder for {motor} failed to reset after {max_reset_attempts} attempts. Calibration aborted.")
-            return
-        print(f"The robot will now move the {motor} motor at a constant speed.")
-        print(f"Please count the number of full wheel cycles (rotations) and enter the actual number after the motor stops.")
-        speed = 40  # Set a reasonable calibration speed
-        cycles_to_run = rotations
-        # Calculate ticks needed for the requested number of cycles
-        # Use last saved ticks_per_rev if available, else default
-        ticks_per_rev_est = prev_ticks_per_rev if prev_ticks_per_rev is not None else robot.TICKS_PER_REV
-        target_ticks = int(cycles_to_run * ticks_per_rev_est)
-        print(f"Target: {cycles_to_run} cycles (about {target_ticks} encoder ticks, using ticks_per_rev={ticks_per_rev_est:.2f})")
-        # Start motor
-        time.sleep(2)  # Give user time to prepare
-        robot.set_motor(motor, speed)
-        start_ticks = robot.get_encoder(motor)
-        start_time = time.time()
-        timeout = 20  # seconds
-        print(f"[DEBUG] Starting encoder: {start_ticks}")
-        while True:
-            current_ticks = robot.get_encoder(motor)
-            tick_diff = abs(current_ticks - start_ticks)
-            print(f"[DEBUG] Encoder: {current_ticks}, Tick diff: {tick_diff}")
-            if tick_diff >= target_ticks:
-                break
-            if time.time() - start_time > timeout:
-                print("[ERROR] Calibration timeout: Encoder not responding as expected.")
-                break
-            time.sleep(0.05)
-        robot.set_motor(motor, 0)
-        print(f"Motor stopped after reaching {cycles_to_run} cycles (estimated) or timeout.")
-        # User enters actual number of cycles observed
-        try:
-            user_cycles = float(input("Enter the ACTUAL number of cycles you observed: "))
-        except Exception:
-            print("No valid input for cycles. Aborting calibration.")
-            return
-        ticks = abs(robot.get_encoder(motor)) - start_ticks
-        print(f"Encoder ticks counted: {ticks}")
-        if user_cycles == 0:
-            print("Cycles cannot be zero. Aborting calibration.")
-            return
-        # Estimate cycles from encoder ticks and estimated ticks per rev
-        est_cycles = ticks / ticks_per_rev_est
-        print(f"Estimated cycles (from encoder): {est_cycles:.2f}")
-        # Calculate percentage difference
-        percent_diff = 100.0 * abs(est_cycles - user_cycles) / user_cycles
-        print(f"Percentage difference: {percent_diff:.2f}%")
-        ticks_per_rev = ticks / user_cycles
-        print(f"Ticks per revolution for {motor}: {ticks_per_rev:.2f}")
-        # Calculate calibration factor
-        actual = actual_distance_cm / 100.0
-        measured = user_cycles * robot.WHEEL_CIRCUMFERENCE
-        cal_factor = actual / measured
-        print(f"\nNew calibration factor for {motor}: {cal_factor:.5f}")
-        # Save calibration data
-        config_dir = os.path.expanduser("~/.config/mobile_robot")
+    print("On-ground calibration for entire robot")
+    print(f"The robot will attempt to move {actual_distance_m}m ({actual_distance_m*100:.0f}cm).")
+    print("Please measure the ACTUAL distance traveled after movement.")
+    
+    print("\nStarting calibrated movement...")
+    try:
+        # Use the library's move_distance function which handles everything
+        measured_distance_m = robot.move_distance(actual_distance_m, speed=100)
+        
+        print(f"\nMovement completed!")
+        print(f"Library reported distance: {measured_distance_m:.4f}m ({measured_distance_m*100:.1f}cm)")
+        print(f"Expected distance: {actual_distance_m:.4f}m ({actual_distance_m*100:.1f}cm)")
+        actual_distance = float(input("Press Enter after measuring the actual distance traveled...\nActual distance (m): "))
+        
+    except Exception as e:
+        print(f"[ERROR] Robot movement failed: {e}")
+        return
+    
+    if measured_distance_m == 0:
+        print("[ERROR] No movement detected! Check:")
+        print("1. Robot wheels touching ground")
+        print("2. Motors working properly") 
+        print("3. Encoders connected")
+        print("4. Sufficient battery power")
+        return
+    
+    # Calculate calibration correction factor
+    correction_factor = actual_distance / measured_distance_m
+    print(f"\nCorrection factor needed: {correction_factor:.5f}")
+    print(f"(Actual: {actual_distance:.4f}m ÷ Measured: {measured_distance_m:.4f}m)")
+    
+    # Load existing calibration factor
+    existing_calib_data = load_calibration_data()
+    existing_factor = existing_calib_data.get('calibration_factor', 1.0)
+    print(f"Existing calibration factor: {existing_factor:.5f}")
+    
+    # Apply correction to existing calibration factor
+    new_calibration_factor = existing_factor * correction_factor
+    print(f"New calibration factor: {new_calibration_factor:.5f}")
+    print(f"({existing_factor:.5f} × {correction_factor:.5f})")
+    
+    # Save calibration data
+    config_dir = os.path.expanduser("~/.config/mobile_robot")
+    try:
         os.makedirs(config_dir, exist_ok=True)
-        calib_path = os.path.join(config_dir, f"calibration_{motor}.json")
-        data = {"ticks_per_rev": ticks_per_rev, "calibration_factor": cal_factor, "date": time.strftime("%Y-%m-%d %H:%M:%S")}
+        calib_path = os.path.join(config_dir, "calibration.json")
+        data = {
+            "calibration_factor": new_calibration_factor,
+            "previous_factor": existing_factor,
+            "correction_factor": correction_factor,
+            "actual_distance_m": actual_distance_m,
+            "measured_distance_m": measured_distance_m,
+            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S')
+        }
         with open(calib_path, "w") as f:
             json.dump(data, f, indent=2)
         print(f"Calibration data saved to {calib_path}")
-        return
-    # All-motor calibration (average)
-    if motor == 'ALL':
-        if mode == 'freewheel':
-            print("\nFreewheel Calibration Selected.")
-            print("Resetting encoders...")
-            robot.reset_encoders()
-            print("Place robot on a flat surface. Roll the robot forward in a straight line.")
-            print("(No user input required. Proceeding...)")
-            distances = {m: robot.get_distance(m) for m in ['LF','RF','LB','RB']}
-            avg_dist = sum(distances.values()) / 4
-            print("\nReported distances:")
-            for m, d in distances.items():
-                print(f"  {m}: {d*100:.1f}cm")
-            print(f"Average: {avg_dist*100:.1f}cm")
-        else:
-            print("\nOn-ground Calibration Selected.")
-            print("The robot will move forward for 5 seconds. Please measure the actual distance traveled.")
-            print("(No user input required. Proceeding...)")
-            print("Resetting encoders...")
-            robot.reset_encoders()
-            print("Encoders reset. Starting movement...")
-            print("\nMoving forward...")
-            robot.Forward(50)
-            time.sleep(5)
-            robot.stop()
-            distances = {m: robot.get_distance(m) for m in ['LF','RF','LB','RB']}
-            avg_dist = sum(distances.values()) / 4
-            print("\nReported distances:")
-            for m, d in distances.items():
-                print(f"  {m}: {d*100:.1f}cm")
-            print(f"Average: {avg_dist*100:.1f}cm")
-        actual = actual_distance_cm / 100.0
-        if avg_dist != 0:
-            robot.calibration_factor = actual / avg_dist
-            print(f"\nNew calibration factor: {robot.calibration_factor:.5f}")
-            config_dir = os.path.expanduser("~/.config/mobile_robot")
-            os.makedirs(config_dir, exist_ok=True)
-            calib_path = os.path.join(config_dir, "calibration.json")
-            data = {"calibration_factor": robot.calibration_factor, "date": time.strftime("%Y-%m-%d %H:%M:%S")}
-            with open(calib_path, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"Calibration data saved to {calib_path}")
-        else:
-            print("Error: Average reported distance is zero. Calibration aborted.")
-##########################################
+    except Exception as e:
+        print(f"[ERROR] Failed to save calibration data: {e}")
+        print(f"New calibration factor: {new_calibration_factor:.5f} (not saved)")
 
-try: 
-    calibrate_distance(mode='freewheel', actual_distance_cm=10, motor='ALL', rotations=10)
-    # robot.reset_encoders(debug = True)
-    # time.sleep(1)
-    # print(robot.get_encoder('LF'))
-except Exception as e:
-    print(f"Calibration failed: {e}")
-
-except KeyboardInterrupt:
-    print("\nCalibration interrupted by user.")
+if __name__ == "__main__":
+    try: 
+        print("Encoder Calibration Tool")
+        print("1. Display calibration status")
+        print("2. Run calibration (10cm)")
+        print("3. Custom calibration distance")
+        
+        choice = input("Enter choice (1-3): ")
+        
+        if choice == '1':
+            display_calibration_status()
+        elif choice == '2':
+            calibrate_distance()
+        elif choice == '3':
+            distance_input = input("Actual distance in meters [0.10]: ").strip()
+            actual_distance = float(distance_input) if distance_input else 0.10
+            calibrate_distance(actual_distance_m=actual_distance)
+        else:
+            print("Invalid choice")
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
+        robot.cleanup()
