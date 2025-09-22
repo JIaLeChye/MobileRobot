@@ -26,14 +26,18 @@ A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with a
 - **Per-Motor Calibration**: Individual motor tuning for improved accuracy
 
 ## 📋 Table of Contents
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-- [Repository Structure](#repository-structure)
-- [Hardware Requirements](#hardware-requirements)
-- [User Applications](#user-applications)
-- [Libraries](#libraries)
-- [Contributing](#contributing)
-- [Documentation](#documentation)
+- [🚀 Features](#-features)
+- [⚡ Quick Start](#-quick-start)
+- [📁 Repository Structure](#-repository-structure)
+- [🔧 Installation](#-installation)
+- [📱 User Applications](#-user-applications)
+- [📚 Libraries](#-libraries)
+- [🤝 Contributing](#-contributing)
+- [📖 Version Control & Changelog](#-version-control--changelog)
+- [📖 Documentation](#-documentation)
+- [📄 License](#-license)
+- [🙏 Acknowledgments](#-acknowledgments)
+- [📞 Support](#-support)
 
 ## ⚡ Quick Start
 
@@ -225,16 +229,6 @@ chmod +x setup.sh
 - **Blynk**: Mobile app connectivity
 - **Adafruit Libraries**: Hardware interfacing (OLED, PCA9685)
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTING.md) for details.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes and test thoroughly
-4. Submit a pull request
-
 ### Coding Standards
 - Follow PEP 8 for Python code
 - Include docstrings for all functions
@@ -270,34 +264,20 @@ This project follows [Semantic Versioning](https://semver.org/) with **automatic
   - **OpenCV Integration**: Better camera testing with OpenCV functionality
   - **Error Detection**: More comprehensive hardware validation
 
-#### Current Library Versions
+### Current Library Versions
 - **RPi_Robot_Hat_Lib**: 1.2.15
 - **Ultrasonic_sens**: 1.0.4
 - **IRSens**: 1.0.4
 
-#### Example Workflow
-```bash
-# Regular development (automatic versioning)
-git add Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py
-git commit -m "Fix encoder filtering bug"
-# ✅ Version automatically bumped: 1.2.2 → 1.2.3
 
-# Major feature release (manual versioning)
-./bump_version.sh major RPi_Robot_Hat_Lib
-git add .
-git commit -m "Major update: Add new movement algorithms"
-# ✅ Version manually bumped: 1.2.3 → 2.0.0
-```
-
-#### Files Managed
+### Files Managed
 - `Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py` - Main library with version string
 - `Libraries/RPi_Robot_Hat_Lib/setup.py` - Package setup with version
 - `Libraries/Ultrasonic_Sensor/setup.py` - Sensor library setup
 - `Libraries/IR_Sensor/setup.py` - IR sensor library setup
-- `.git/hooks/pre-commit` - Automatic version detection hook
-- `bump_version.sh` - Manual version management script
+-
 
-#### Benefits
+### Benefits
 - **No manual version tracking** - Automatic patch increments
 - **Consistent versioning** - All related files stay in sync  
 - **Git integration** - Works seamlessly with your workflow
@@ -316,31 +296,42 @@ git commit -m "Major update: Add new movement algorithms"
 
 ## 📖 Documentation
 
-### Getting Started
-- [Hardware Setup Guide](./docs/hardware-setup.md)
-- [Software Installation](./docs/installation.md)
-- [First Run Tutorial](./docs/first-run.md)
+### 📚 Interactive Jupyter Notebooks
+Each application includes comprehensive documentation with code explanations, usage examples, and step-by-step tutorials:
 
-### API Reference
-- [RPi_Robot_Hat_Lib API](./docs/api-reference.md)
-- [Sensor Libraries](./docs/sensors.md)
-- [Examples and Tutorials](./docs/examples.md)
+#### Core Applications
+- **🚗 [Motor & Encoder Control](./Motor_and_Encoder/Motor_and_Encoder.ipynb)** - Basic motor control and encoder usage
+- **🔋 [Battery Management System](./BMS/Battery.ipynb)** - Power monitoring and management
+- **🔋 [Battery Service Setup](./BMS/battery.service.ipynb)** - System service configuration
 
-### Troubleshooting
-- [Common Issues](./docs/troubleshooting.md)
-- [Hardware Debugging](./docs/hardware-debug.md)
-- [Performance Optimization](./docs/optimization.md)
+#### Navigation & Autonomous Control
+- **🎯 [Line Following (OpenCV)](./Line_Following/With_OpenCV/Line_Following.ipynb)** - Vision-based line following
+- **🎯 [Line Following (Sensors)](./Line_Following/With_Sensors/Line_Following.ipynb)** - Sensor-based line following
+- **🚧 [Obstacle Avoidance (Camera)](./Obstacle_Avoidance/with_camera/Obstacle_Avoidance.ipynb)** - Vision-based navigation
+- **🚧 [Obstacle Avoidance (Sensors)](./Obstacle_Avoidance/without_camera/Obstacle_Avoidance.ipynb)** - Sensor-based navigation
 
-## 📄 License
+#### Computer Vision & Recognition
+- **🤖 [Object Recognition (TensorFlow)](./Object-Recofnition(TF)/Object_Recognition(tensor_Flow).ipynb)** - Full TensorFlow object detection
+- **🤖 [Object Recognition (TensorFlow Lite)](./Object-Recognition(TFLite)/Object_Recognition_with_TFLite.ipynb)** - Lightweight object detection
+- **👁️ [Object Tracking (Color-Based)](./Object_Tracking/Color_Based/Object_tracking.ipynb)** - Color-based object tracking
+- **👁️ [Object Tracking (KCF)](./Object_Tracking/KCF_Tracler/Object_tracking.ipynb)** - Advanced KCF tracking algorithm
+- **📷 [QR Code Recognition](./QR_Code_Recognition/QR_Recognition.ipynb)** - QR code detection and processing
+- **🏷️ [AprilTag Recognition](./April_Tag_Recognition/April-Tag_Recognition.ipynb)** - AprilTag detection for navigation
+- **👋 [Hand Gesture Control](./Hand-Gesture/Hand_gesture.ipynb)** - Gesture-based robot control
+- **🎨 [HSV Color Picker](./HSV_Color_Picker/HSV_Color_Picker.ipynb)** - Color calibration tool
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+#### Remote Control & Mobile Integration
+- **📱 [Mobile Controller](./Mobile_Controller/Mobile_Controller/Mobile_Controller_V2.ipynb)** - Smartphone remote control
+- **📱 [Mobile Controller with Obstacle Alert](./Mobile_Controller/With_Obstacle_Alert/Mobile_Controller_With_Obstacle_Alert.ipynb)** - Enhanced mobile control
 
-## 🙏 Acknowledgments
+#### Advanced Applications
+- **🎯 [Object Tracking with Avoidance](./Object_Tracking_with_Avoidance/Object_Tracking_with%20Avoidance.ipynb)** - Combined tracking and navigation
 
-- Raspberry Pi Foundation for the amazing platform
-- OpenCV community for computer vision tools
-- Adafruit for excellent hardware libraries
-- TensorFlow team for machine learning capabilities
+#### Library Documentation
+- **📚 [RPi Robot Hat Library](./Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.ipynb)** - Main robot control library
+- **📚 [RPi Robot Hat API Reference](./Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib_API.ipynb)** - Complete API documentation
+- **📏 [Ultrasonic Sensor Library](./Libraries/Ultrasonic_Sensor/Ultrasonic_sens.ipynb)** - Distance measurement library
+- **🔍 [IR Sensor Library](./Libraries/IR_Sensor/IRSens.ipynb)** - Infrared detection library
 
 ## 📞 Support
 
