@@ -263,7 +263,7 @@ This project follows [Semantic Versioning](https://semver.org/) with **automatic
   - **Error Detection**: More comprehensive hardware validation
 
 ### Current Library Versions
-- **RPi_Robot_Hat_Lib**: 1.2.15
+- **RPi_Robot_Hat_Lib**: 1.2.16
 - **Ultrasonic_sens**: 1.0.4
 - **IRSens**: 1.0.4
 

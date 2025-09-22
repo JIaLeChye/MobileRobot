@@ -68,7 +68,7 @@ class RobotController:
         self.REG_VOLTAGE = 17
         self.REG_ENCODER_RESET = 18
         self.REG_SYSTEM_RESET = 19
-        self.lib_ver= "1.2.15"
+        self.lib_ver= "1.2.16"
 
         # Internal helper dicts for DRY code (do not remove explicit assignments above)
         self.MOTOR_REGS = {
