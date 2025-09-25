@@ -4,7 +4,7 @@ import subprocess
 import importlib.util
 import sys
 import logging
-from packaging import version
+# from packaging import version
 import platform
 
 
@@ -138,23 +138,12 @@ def main():
         should_update = False
         
         if local_ver and remote_ver:
-            try:
-                # Try semantic version comparison
-                local_parsed = version.parse(local_ver)
-                remote_parsed = version.parse(remote_ver)
-                
-                if remote_parsed > local_parsed:
-                    logging.info(f"🚀 Updating from {local_ver} to {remote_ver}...")
-                    should_update = True
-                else:
-                    logging.info("✅ Already up to date.")
-            except Exception as version_error:
-                logging.warning(f"Version parsing failed: {version_error}, using string comparison")
-                if local_ver != remote_ver:
-                    logging.info(f"🚀 Versions differ: {local_ver} != {remote_ver}, updating...")
-                    should_update = True
-                else:
-                    logging.info("✅ Already up to date.")
+            # Simple string comparison for version checking
+            if local_ver != remote_ver:
+                logging.info(f"🚀 Versions differ: {local_ver} != {remote_ver}, updating...")
+                should_update = True
+            else:
+                logging.info("✅ Already up to date.")
         elif not local_ver and remote_ver:
             logging.info(f"🚀 No local version found, updating to {remote_ver}...")
             should_update = True

@@ -5,13 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=root
-Group=root
-WorkingDirectory=/home/pi/Desktop/MobileRobot
-ExecStart=/usr/bin/python3 /home/pi/Desktop/MobileRobot/RepoUpdater/updater.py
-Environment=HOME=/home/pi
-Environment=USER=pi
-Environment=SUDO_USER=pi
+User=username
+Environment=MCUPDATER_LOG_DIR=/home/user/Desktop/MCUpdater_Log
+WorkingDirectory=/path/to/updater.py
+ExecStart=/usr/bin/python3 /path/to/updater.py
+# Default to journald; setup.sh will overwrite with Desktop log files
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=300
