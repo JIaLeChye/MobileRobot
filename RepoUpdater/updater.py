@@ -98,10 +98,54 @@ def get_remote_version():
         return None
 
 
+def update_repo_via_temp():
+    """Update repository by cloning to temp folder and overwriting existing files using only os"""
+    try:
+        # Create temporary directory using os
+        temp_dir = f"/tmp/mcupdater_{os.getpid()}"
+        temp_repo_path = f"{temp_dir}/MobileRobot"
+        
+        logging.info(f"📁 Creating temporary directory: {temp_dir}")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        try:
+            # Clone fresh copy to temp directory
+            subprocess.run(
+                ["git", "clone", "-b", BRANCH, REPO_URL, temp_repo_path],
+                check=True
+            )
+            
+            # Remove old files (except .git)
+            logging.info("🗑️ Removing old files...")
+            for item in os.listdir(REPO_PATH):
+                if item != ".git":
+                    item_path = REPO_PATH / item
+                    if item_path.is_dir():
+                        # Remove directory recursively using os
+                        os.system(f'rm -rf "{item_path}"')
+                    else:
+                        os.remove(item_path)
+            
+            # Copy new files from temp to destination using os
+            logging.info(f"📋 Copying new files to {REPO_PATH}")
+            os.system(f'cp -r "{temp_repo_path}"/* "{REPO_PATH}/"')
+            
+            logging.info("✅ Repository updated via temporary clone")
+            
+        finally:
+            # Clean up temp directory
+            if os.path.exists(temp_dir):
+                os.system(f'rm -rf "{temp_dir}"')
+                
+    except Exception as e:
+        logging.error(f"Error updating repository via temp folder: {e}")
+        raise
+
+
 def update_repo():
     try:
-        logging.info("Pulling latest changes...")
-        subprocess.run(["git", "pull", REMOTE, BRANCH], cwd=REPO_PATH, check=True)
+        logging.info("🔄 Updating repository via temporary clone...")
+        update_repo_via_temp()
         logging.info("Running setup.sh...")
         subprocess.run(["./setup.sh"], cwd=REPO_PATH, check=True)
         logging.info("Repository update completed successfully")
