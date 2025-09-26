@@ -19,10 +19,11 @@ UPDATER_SCRIPT=$(find "$SCRIPT_DIR" -maxdepth 2 -name "updater.py" -print -quit)
 if [ -z "$UPDATER_SCRIPT" ]; then
     UPDATER_SCRIPT=$(find / -name "updater.py" 2>/dev/null | head -n 1)
 fi
-# Log paths on Desktop to match user request and updater.py logging
-STANDARD_OUTPUT="mcupdater_log.txt"
-STANDARD_ERROR_OUTPUT="mcupdater_error_log.txt"
-LOG_FILE_PATH="$USER_HOME/Desktop/MCUpdater_Log"
+
+# Log paths in Debug_log in home directory to match updater.py logging
+STANDARD_OUTPUT="updater_log.txt"
+STANDARD_ERROR_OUTPUT="updater_log.txt"
+LOG_FILE_PATH="$USER_HOME/Debug_log"
 
 echo "User Directory is $USER_HOME"
 

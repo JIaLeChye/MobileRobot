@@ -1,207 +1,166 @@
-from pathlib import Path
+
+
 import os
 import subprocess
-import importlib.util
-import sys
+import tkinter as tk
+from tkinter import ttk
+import threading
 import logging
-# from packaging import version
-import platform
+import webbrowser
 
 
-# === CONFIG ===
-REPO_REL_PATH = Path("Desktop/MobileRobot")
-VERSION_FILE = "version.py"
-BRANCH = "master"
-REMOTE = "origin"
-REPO_URL = "https://github.com/JiaLeChye/MobileRobot.git"
+REPO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Place Debug_log outside Desktop (in user's home directory)
+HOME_DIR = os.path.expanduser('~')
+DEBUG_DIR = os.path.join(HOME_DIR, 'Debug_log')
+os.makedirs(DEBUG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(DEBUG_DIR, 'updater_log.txt')
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('/tmp/mcupdater.log')
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()
     ]
 )
 
+class UpdaterGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Repo Updater")
+        self.root.geometry("400x180")
+        self.root.attributes('-topmost', True)
+        self.label = tk.Label(self.root, text="Checking for updates...", font=("Arial", 16))
+        self.label.pack(pady=10)
+        # Status bar (progress bar)
+        self.progress = ttk.Progressbar(self.root, mode='determinate', length=300, maximum=100)
+        self.progress.pack(pady=5)
+        self.progress['value'] = 0
+        # Buttons frame
+        btn_frame = tk.Frame(self.root)
+        btn_frame.pack(pady=10)
+        github_btn = tk.Button(btn_frame, text="GitHub", width=15, command=lambda: webbrowser.open_new_tab("https://github.com/JiaLeChye/MobileRobot"))
+        github_btn.pack(side=tk.LEFT, padx=10)
+        readme_btn = tk.Button(btn_frame, text="README.md", width=15, command=lambda: webbrowser.open_new_tab("https://github.com/JiaLeChye/MobileRobot/blob/master/README.md"))
+        readme_btn.pack(side=tk.LEFT, padx=10)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.closed = False
+        # Conflict UI elements (hidden by default)
+        self.conflict_label = tk.Label(self.root, text="", fg="red", font=("Arial", 12))
+        self.conflict_label.pack(pady=5)
+        self.conflict_files_box = tk.Listbox(self.root, width=50, height=4)
+        self.conflict_files_box.pack_forget()
+        self.overwrite_btn = tk.Button(self.root, text="Overwrite (Force Update)", fg="white", bg="red", command=self.overwrite_conflicts)
+        self.overwrite_btn.pack_forget()
+        self.hide_conflicts()
 
-def get_home_dir():
-    """Identify user type"""
-    if platform.system() == "Windows":
-        return Path.home()
-    
-    # Unix/Linux systems
-    sudo_user = os.environ.get("SUDO_USER")
-    if sudo_user:
-        import pwd
-        return Path(pwd.getpwnam(sudo_user).pw_dir)
-    return Path.home()
+    def show_conflicts(self, files):
+        self.conflict_label.config(text="Merge conflict detected! Please save your changes elsewhere if needed.")
+        self.conflict_files_box.delete(0, tk.END)
+        for f in files:
+            self.conflict_files_box.insert(tk.END, f)
+        self.conflict_files_box.pack(pady=2)
+        self.overwrite_btn.pack(pady=5)
+        self.root.update_idletasks()
 
+    def hide_conflicts(self):
+        self.conflict_label.config(text="")
+        self.conflict_files_box.pack_forget()
+        self.overwrite_btn.pack_forget()
+        self.root.update_idletasks()
 
-# === PATHS ===
-HOME_DIR = get_home_dir()
-REPO_PATH = HOME_DIR / REPO_REL_PATH
-LOCAL_VERSION_FILE = REPO_PATH / VERSION_FILE
-
-
-# === HELPERS ===
-def clone_or_update_repo():
-    try:
-        if not REPO_PATH.exists():
-            logging.info("📥 Cloning repository...")
-            subprocess.run(
-                ["git", "clone", "-b", BRANCH, REPO_URL, str(REPO_PATH)],
-                check=True
-            )
-        elif (REPO_PATH / ".git").exists():
-            logging.info("🔄 Repo already exists, pulling latest changes...")
-            subprocess.run(["git", "fetch"], cwd=REPO_PATH, check=True)
-            subprocess.run(["git", "pull", REMOTE, BRANCH], cwd=REPO_PATH, check=True)
-        else:
-            logging.error(f"⚠️ Path {REPO_PATH} exists but is not a Git repo. Please clean it manually.")
-            sys.exit(1)
-    except Exception as e:
-        logging.error(f"Error cloning/updating repository: {e}")
-        raise
-
-
-def get_local_version():
-    try:
-        if not LOCAL_VERSION_FILE.exists():
-            logging.warning(f"Local version file not found: {LOCAL_VERSION_FILE}")
-            return None
-        spec = importlib.util.spec_from_file_location("version", str(LOCAL_VERSION_FILE))
-        if spec is None or spec.loader is None:
-            logging.error("Failed to load version module spec")
-            return None
-        version_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(version_module)
-        return getattr(version_module, "__version__", None)
-    except Exception as e:
-        logging.error(f"Error getting local version: {e}")
-        return None
-
-
-def get_remote_version():
-    try:
-        subprocess.run(["git", "fetch", REMOTE], cwd=REPO_PATH, check=True)
-        output = subprocess.check_output(
-            ["git", "show", f"{REMOTE}/{BRANCH}:{VERSION_FILE}"],
-            cwd=REPO_PATH
-        ).decode()
-        context = {}
-        exec(output, context)
-        return context.get("__version__")
-    except Exception as e:
-        logging.error(f"Error getting remote version: {e}")
-        return None
-
-
-def update_repo_via_temp():
-    """Update repository by cloning to temp folder and overwriting existing files using only os"""
-    try:
-        # Create temporary directory using os
-        temp_dir = f"/tmp/mcupdater_{os.getpid()}"
-        temp_repo_path = f"{temp_dir}/MobileRobot"
-        
-        logging.info(f"📁 Creating temporary directory: {temp_dir}")
-        os.makedirs(temp_dir, exist_ok=True)
-        
+    def overwrite_conflicts(self):
+        # Force checkout all files to match remote, discarding local changes
+        import subprocess
+        import tkinter.messagebox
         try:
-            # Clone fresh copy to temp directory
-            subprocess.run(
-                ["git", "clone", "-b", BRANCH, REPO_URL, temp_repo_path],
-                check=True
-            )
-            
-            # Remove old files (except .git)
-            logging.info("🗑️ Removing old files...")
-            for item in os.listdir(REPO_PATH):
-                if item != ".git":
-                    item_path = REPO_PATH / item
-                    if item_path.is_dir():
-                        # Remove directory recursively using os
-                        os.system(f'rm -rf "{item_path}"')
-                    else:
-                        os.remove(item_path)
-            
-            # Copy new files from temp to destination using os
-            logging.info(f"📋 Copying new files to {REPO_PATH}")
-            os.system(f'cp -r "{temp_repo_path}"/* "{REPO_PATH}/"')
-            
-            logging.info("✅ Repository updated via temporary clone")
-            
-        finally:
-            # Clean up temp directory
-            if os.path.exists(temp_dir):
-                os.system(f'rm -rf "{temp_dir}"')
-                
-    except Exception as e:
-        logging.error(f"Error updating repository via temp folder: {e}")
-        raise
+            subprocess.run(["git", "reset", "--hard", "origin/master"], cwd=REPO_PATH, check=True)
+            subprocess.run(["git", "clean", "-fd"], cwd=REPO_PATH, check=True)
+            tkinter.messagebox.showinfo("Overwrite Complete", "All conflicts have been overwritten with the latest update.")
+            self.hide_conflicts()
+            self.set_status("Repo forcibly updated to latest.", progress=100)
+        except Exception as e:
+            tkinter.messagebox.showerror("Error", f"Failed to overwrite: {e}")
 
 
-def update_repo():
+    # open_readme method removed; now handled by webbrowser lambda
+
+    def set_status(self, msg, progress=None):
+        self.label.config(text=msg)
+        if progress is not None:
+            self.progress['value'] = progress
+            self.progress.pack(pady=5)
+        # Hide progress bar if done
+        if progress == 100 or (progress is None and not ("Checking" in msg or "Fetching" in msg or "Pulling" in msg or "Updating" in msg)):
+            self.progress.pack_forget()
+        self.root.update_idletasks()
+
+    def close_after(self, seconds):
+        self.root.after(int(seconds * 1000), self.root.destroy)
+
+    def on_close(self):
+        self.closed = True
+        self.root.destroy()
+
+    def run(self):
+        self.root.mainloop()
+
+
+def update_repo(gui: UpdaterGUI):
     try:
-        logging.info("🔄 Updating repository via temporary clone...")
-        update_repo_via_temp()
-        logging.info("Running setup.sh...")
-        subprocess.run(["./setup.sh"], cwd=REPO_PATH, check=True)
-        logging.info("Repository update completed successfully")
-    except Exception as e:
-        logging.error(f"Error updating repository: {e}")
-        raise
-
-
-# === MAIN ===
-def main():
-    if not HOME_DIR:
-        logging.error("❌ Unable to retrieve Home Directory")
-        sys.exit(1)
-    
-    logging.info(f"🏠 Home Directory: {HOME_DIR}")
-    logging.info(f"📂 Repo Path: {REPO_PATH}")
-    logging.info(f"📄 Version File: {LOCAL_VERSION_FILE}")
-
-    local_ver = None
-    remote_ver = None
-    
-    try:
-        # Clone or update repository
-        clone_or_update_repo()
-
-        # Get version information
-        local_ver = get_local_version()
-        remote_ver = get_remote_version()
-
-        logging.info(f"📦 Local version:  {local_ver}")
-        logging.info(f"🌐 Remote version: {remote_ver}")
-
-        # Compare versions and update if needed
-        should_update = False
-        
-        if local_ver and remote_ver:
-            # Simple string comparison for version checking
-            if local_ver != remote_ver:
-                logging.info(f"🚀 Versions differ: {local_ver} != {remote_ver}, updating...")
-                should_update = True
-            else:
-                logging.info("✅ Already up to date.")
-        elif not local_ver and remote_ver:
-            logging.info(f"🚀 No local version found, updating to {remote_ver}...")
-            should_update = True
+        logging.info("Starting update process.")
+        gui.set_status("Checking for updates...", progress=0)
+        gui.hide_conflicts()
+        gui.set_status("Fetching updates...", progress=25)
+        logging.info("Running: git fetch")
+        subprocess.run(["git", "fetch"], cwd=REPO_PATH, check=True)
+        gui.set_status("Pulling latest changes...", progress=75)
+        logging.info("Running: git pull")
+        result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True)
+        logging.info(f"git pull output: {result.stdout.strip()}")
+        # Check for conflicts
+        conflict_files = get_conflict_files()
+        if conflict_files:
+            gui.set_status("Merge conflict detected!", progress=100)
+            gui.show_conflicts(conflict_files)
+            logging.warning(f"Merge conflicts: {conflict_files}")
+            return
+        if "Already up to date" in result.stdout:
+            gui.set_status("Repo up to date", progress=100)
+            logging.info("Repo is already up to date.")
+            gui.close_after(60)
         else:
-            logging.warning("Unable to determine version information")
-            
-        # Perform update if needed
-        if should_update:
-            update_repo()
-            logging.info(f"✅ Update complete: now at version {remote_ver}")
-            
+            gui.set_status("Repo updated!\n" + result.stdout.strip(), progress=100)
+            logging.info("Repo updated successfully.")
     except Exception as e:
-        logging.error(f"Fatal error during execution: {e}")
-        sys.exit(1)
+        gui.set_status(f"Error: {e}", progress=100)
+        logging.error(f"Error during update: {e}", exc_info=True)
+
+# Helper to get conflicted files
+def get_conflict_files():
+    import subprocess
+    try:
+        result = subprocess.run(["git", "ls-files", "-u"], cwd=REPO_PATH, capture_output=True, text=True)
+        lines = result.stdout.strip().splitlines()
+        files = set()
+        for line in lines:
+            parts = line.split('\t')
+            if len(parts) == 2:
+                files.add(parts[1])
+        return sorted(files)
+    except Exception:
+        return []
+
+
+def main():
+    gui = UpdaterGUI()
+    t = threading.Thread(target=update_repo, args=(gui,), daemon=True)
+    t.start()
+    gui.run()
+
 
 if __name__ == "__main__":
     main()

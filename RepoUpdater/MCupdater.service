@@ -3,13 +3,14 @@ Description=Mobile Robot Code Updater Service
 After=network-online.target
 Wants=network-online.target
 
+
 [Service]
 Type=oneshot
 User=username
-Environment=MCUPDATER_LOG_DIR=/home/user/Desktop/MCUpdater_Log
+Environment=MCUPDATER_LOG_DIR=/home/user/Debug_log
 WorkingDirectory=/path/to/updater.py
 ExecStart=/usr/bin/python3 /path/to/updater.py
-# Default to journald; setup.sh will overwrite with Desktop log files
+# Default to journald; setup.sh will overwrite with Debug_log log files
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=300
