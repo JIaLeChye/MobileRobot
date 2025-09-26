@@ -330,9 +330,3 @@ Each application includes comprehensive documentation with code explanations, us
 - **📚 [RPi Robot Hat API Reference](./Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib_API.ipynb)** - Complete API documentation
 - **📏 [Ultrasonic Sensor Library](./Libraries/Ultrasonic_Sensor/Ultrasonic_sens.ipynb)** - Distance measurement library
 - **🔍 [IR Sensor Library](./Libraries/IR_Sensor/IRSens.ipynb)** - Infrared detection library
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/JIaLeChye/MobileRobot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/JIaLeChye/MobileRobot/discussions)
-- **Wiki**: [Project Wiki](https://github.com/JIaLeChye/MobileRobot/wiki)
