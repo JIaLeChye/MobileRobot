@@ -161,6 +161,25 @@ sudo systemctl start "$SERVICE_NAME" || {
 echo "Service status:"
 sudo systemctl status "$SERVICE_NAME"
 
+
+# --- Desktop autostart for GUI (LXDE/desktop login) ---
+AUTOSTART_DIR="$USER_HOME/.config/autostart"
+AUTOSTART_FILE="$AUTOSTART_DIR/mobilerobot-updater.desktop"
+PYTHON_EXEC=$(command -v python3)
+
+echo "Setting up desktop autostart for GUI updater..."
+mkdir -p "$AUTOSTART_DIR"
+cat > "$AUTOSTART_FILE" <<EOF
+[Desktop Entry]
+Type=Application
+Name=MobileRobot Updater
+Exec=$PYTHON_EXEC $UPDATER_SCRIPT
+X-GNOME-Autostart-enabled=true
+EOF
+chown "$SERVICE_USER":"$SERVICE_USER" "$AUTOSTART_FILE"
+echo "Desktop autostart entry created at $AUTOSTART_FILE"
+
 echo "Setup complete! The MCupdater service will run automatically when needed."
 echo "To manually trigger an update, run: sudo systemctl start $SERVICE_NAME"
 echo "To check logs, see: $LOG_FILE_PATH/$STANDARD_OUTPUT"
+echo "The GUI updater will also run on desktop login for user $SERVICE_USER."

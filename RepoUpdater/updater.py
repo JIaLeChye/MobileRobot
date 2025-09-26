@@ -1,5 +1,4 @@
 
-
 import os
 import subprocess
 import tkinter as tk
@@ -7,6 +6,8 @@ from tkinter import ttk
 import threading
 import logging
 import webbrowser
+from datetime import datetime, timedelta, timezone
+import tkinter.messagebox
 
 
 REPO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -17,6 +18,7 @@ DEBUG_DIR = os.path.join(HOME_DIR, 'Debug_log')
 os.makedirs(DEBUG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(DEBUG_DIR, 'updater_log.txt')
 
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -26,6 +28,23 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# Write log header with time (UTC+8) and date
+
+def log_run_header():
+    # Clear log if too large (e.g., >2MB)
+    max_size = 2 * 1024 * 1024  # 2MB
+    if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) > max_size:
+        with open(LOG_FILE, 'w') as f:
+            f.write('')
+    tz = timezone(timedelta(hours=8))
+    now = datetime.now(tz)
+    header = f"/----------{now.strftime('%H:%M:%S (UTC+8) %Y-%m-%d')}---------/"
+    with open(LOG_FILE, 'a') as f:
+        f.write(header + '\n')
+    logging.info(header)
+
+log_run_header()
 
 class UpdaterGUI:
     def __init__(self):
@@ -74,8 +93,6 @@ class UpdaterGUI:
 
     def overwrite_conflicts(self):
         # Force checkout all files to match remote, discarding local changes
-        import subprocess
-        import tkinter.messagebox
         try:
             subprocess.run(["git", "reset", "--hard", "origin/master"], cwd=REPO_PATH, check=True)
             subprocess.run(["git", "clean", "-fd"], cwd=REPO_PATH, check=True)
@@ -141,7 +158,6 @@ def update_repo(gui: UpdaterGUI):
 
 # Helper to get conflicted files
 def get_conflict_files():
-    import subprocess
     try:
         result = subprocess.run(["git", "ls-files", "-u"], cwd=REPO_PATH, capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
@@ -155,11 +171,43 @@ def get_conflict_files():
         return []
 
 
+
+def headless_update():
+    try:
+        logging.info("Starting update process (headless mode).")
+        subprocess.run(["git", "fetch"], cwd=REPO_PATH, check=True)
+        logging.info("Running: git pull")
+        result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True)
+        logging.info(f"git pull output: {result.stdout.strip()}")
+        conflict_files = get_conflict_files()
+        if conflict_files:
+            logging.warning(f"Merge conflicts: {conflict_files}")
+            logging.warning("Merge conflict detected! Please resolve manually or run the updater in GUI mode to use the overwrite option.")
+            print("Merge conflict detected! Files:")
+            for f in conflict_files:
+                print(f" - {f}")
+            print("Resolve manually or run updater.py in GUI mode to force overwrite.")
+            return
+        if "Already up to date" in result.stdout:
+            logging.info("Repo is already up to date.")
+        else:
+            logging.info("Repo updated successfully.")
+    except Exception as e:
+        logging.error(f"Error during update: {e}", exc_info=True)
+
+def is_gui_available():
+    # Check for X11/Wayland display or Raspberry Pi desktop session
+    return os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+
 def main():
-    gui = UpdaterGUI()
-    t = threading.Thread(target=update_repo, args=(gui,), daemon=True)
-    t.start()
-    gui.run()
+    if is_gui_available():
+        gui = UpdaterGUI()
+        t = threading.Thread(target=update_repo, args=(gui,), daemon=True)
+        t.start()
+        gui.run()
+    else:
+        print("No GUI detected. Running in headless mode.")
+        headless_update()
 
 
 if __name__ == "__main__":
