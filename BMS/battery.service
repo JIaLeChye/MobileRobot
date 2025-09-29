@@ -3,10 +3,10 @@ Description=Battery Monitoring Script
 
 [Service]
 User=usename
-Environment=BATTERY_LOG_DIR=/home/user/Desktop/Battery_Log
+Environment=BATTERY_LOG_DIR=/home/user/Debug_log
 WorkingDirectory=/path/to/Battery.py
 ExecStart=/usr/bin/python3 /path/to/Battery.py
-# Default to journald; setup.sh will overwrite with Desktop log files
+# Default to journald; setup.sh will overwrite with Debug_log log files
 StandardOutput=journal
 StandardError=journal
 Restart=always

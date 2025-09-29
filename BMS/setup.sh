@@ -19,10 +19,10 @@ BATTERY_SCRIPT=$(find "$SCRIPT_DIR" -maxdepth 2 -name "Battery.py" -print -quit)
 if [ -z "$BATTERY_SCRIPT" ]; then
     BATTERY_SCRIPT=$(find / -name "Battery.py" 2>/dev/null | head -n 1)
 fi
-# Log paths on Desktop to match user request and Battery.py cleanup
+# Log paths in Debug_log directory (outside Desktop)
 STANDARD_OUTPUT="battery_log.txt"
 STANDARD_ERROR_OUTPUT="battery_error_log.txt"
-LOG_FILE_PATH="$USER_HOME/Desktop/Battery_Log"
+LOG_FILE_PATH="$USER_HOME/Debug_log"
 
 echo "User Directory is $USER_HOME"
 
