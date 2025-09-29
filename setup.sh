@@ -62,7 +62,7 @@ install_local_if_needed() {
         return 0
     fi
     echo "  -> Installing $dist (local version: ${local_ver:-unknown}, installed: ${installed_ver:-none})"
-    ( cd "$dir" && sudo pip3 install . ) || return 1
+    ( cd "$dir" && sudo pip3 install . --break-system-packages ) || return 1
 }
 
 echo "=============================================================="
@@ -127,7 +127,42 @@ fi
 check_status "I2C/Camera check"
 
 echo "=============================================================="
-echo "Step 4): Install Python requirements"
+echo "Step 4): Remove pip installation restrictions"
+echo "=============================================================="
+echo "Removing pip externally-managed restrictions for global package installation..."
+
+# Find and disable externally-managed file that prevents pip installations
+EXTERNALLY_MANAGED_FILES=(
+    "/usr/lib/python3.11/EXTERNALLY-MANAGED"
+    "/usr/lib/python3.12/EXTERNALLY-MANAGED"
+    "/usr/lib/python3/dist-packages/EXTERNALLY-MANAGED"
+    "/usr/lib/python*/EXTERNALLY-MANAGED"
+)
+
+EXTERNALLY_MANAGED_FOUND=false
+for pattern in "${EXTERNALLY_MANAGED_FILES[@]}"; do
+    for file in $pattern; do
+        if [ -f "$file" ]; then
+            echo "Found externally-managed file: $file"
+            echo "Renaming to ${file}.old to enable global pip installations..."
+            sudo mv "$file" "${file}.old" || true
+            EXTERNALLY_MANAGED_FOUND=true
+        fi
+    done
+done
+
+if [ "$EXTERNALLY_MANAGED_FOUND" = true ]; then
+    echo "✓ Pip restrictions removed - global installations now allowed"
+else
+    echo "ℹ No externally-managed restrictions found - pip should work normally"
+fi
+
+# Also add --break-system-packages flag support for newer pip versions
+export PIP_BREAK_SYSTEM_PACKAGES=1
+echo "✓ Set PIP_BREAK_SYSTEM_PACKAGES=1 for this session"
+
+echo "=============================================================="
+echo "Step 5): Install Python requirements"
 echo "=============================================================="
 echo "Installing Python requirements (best-effort)..."
 success_pkgs=()
@@ -190,7 +225,7 @@ PY
             echo "     (already installed: $pkg_base) - skipping"
             continue
         fi
-        if sudo pip3 install "$clean_pkg"; then
+        if sudo pip3 install "$clean_pkg" --break-system-packages; then
             success_pkgs+=("$clean_pkg")
         else
             fail_pkgs+=("$clean_pkg")
@@ -202,7 +237,7 @@ fi
 
 # 6) Install local libraries via pip (editable copies not required)
 echo "=============================================================="
-echo "Step 5): Install local libraries"
+echo "Step 6): Install local libraries"
 echo "=============================================================="
 ROBOT_PATH=$(pwd)
 echo "Installing local libraries (skip if same version already installed)..."
@@ -249,23 +284,23 @@ for lib in "${custom_libraries[@]}"; do
 done
 
 echo "=============================================================="
-echo "Step 6): Permissions and group membership"
+echo "Step 7): Permissions and group membership"
 echo "=============================================================="
 echo "Adding user to gpio,i2c,spi groups..."
 sudo usermod -a -G gpio,i2c,spi "$USER" || true
 check_status "Permissions setup"
 
 echo "=============================================================="
-echo "Step 7): I2C quick probe (optional)"
+echo "Step 8): I2C quick probe (optional)"
 echo "=============================================================="
 echo "I2C quick probe (optional)..."
 if command -v i2cdetect >/dev/null 2>&1; then
     sudo i2cdetect -y 1 2>/dev/null || echo "No I2C devices detected (ok if hardware not connected)"
 fi
 
-# 8) Install BMS battery service (systemd)
+# 9) Install BMS battery service (systemd)
 echo "=============================================================="
-echo "Step 8): Install BMS battery service"
+echo "Step 9): Install BMS battery service"
 echo "=============================================================="
 BMS_DIR="$(pwd)/BMS"
 BMS_SETUP_RESULT="skipped"
@@ -300,14 +335,54 @@ else
     BMS_SETUP_RESULT="missing"
 fi
 
-# 9) FINAL GPIO library setup for Pi 5 - Done last to prevent conflicts
+# 10) Install Repository Auto-Updater Service (MCupdater)
 echo "=============================================================="
-echo "FINAL: GPIO Library Setup for Raspberry Pi 5"
+echo "Step 10): Install Repository Auto-Updater Service (MCupdater)"
+echo "=============================================================="
+
+MCUPDATER_SETUP_RESULT="unknown"
+if [ -d "RepoUpdater" ]; then
+    echo "RepoUpdater directory found, installing MCupdater service..."
+    cd RepoUpdater
+    if [ -f "setup.sh" ]; then
+        echo "Running RepoUpdater/setup.sh to install MCupdater service..."
+        if sudo ./setup.sh; then
+            MCUPDATER_SETUP_RESULT="success"
+            echo "MCupdater service installation completed successfully"
+        else
+            MCUPDATER_SETUP_RESULT="failed"
+            echo "WARNING: MCupdater service installation failed"
+        fi
+    else
+        echo "WARNING: RepoUpdater/setup.sh not found"
+        MCUPDATER_SETUP_RESULT="missing-script"
+    fi
+    cd ..
+    
+    # Check service status if systemctl is available
+    if command -v systemctl >/dev/null; then
+        MCUPDATER_SERVICE_NAME="MCupdater.service"
+        if systemctl list-unit-files | grep -q "^${MCUPDATER_SERVICE_NAME}"; then
+            MCUPDATER_ENABLED=$(systemctl is-enabled "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            MCUPDATER_ACTIVE=$(systemctl is-active "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            echo "MCupdater service status: enabled=$MCUPDATER_ENABLED, active=$MCUPDATER_ACTIVE"
+        else
+            echo "MCupdater service unit ($MCUPDATER_SERVICE_NAME) not registered yet."
+        fi
+    fi
+else
+    echo "RepoUpdater directory not found; skipping auto-updater installation"
+    MCUPDATER_SETUP_RESULT="missing-directory"
+fi
+
+# 11) FINAL GPIO library setup for Pi 5 - Done last to prevent conflicts
+echo "=============================================================="
+echo "Step 11): FINAL GPIO Library Setup for Raspberry Pi 5"
 echo "=============================================================="
 
 # Step 1: Remove ALL old RPi.GPIO installations that may have been installed by dependencies
 echo "Final cleanup: Removing any RPi.GPIO installations that conflict with rpi-lgpio..."
-sudo pip3 uninstall -y RPi.GPIO 2>/dev/null || true
+sudo pip3 uninstall -y RPi.GPIO --break-system-packages 2>/dev/null || true
 sudo pip3 uninstall -y RPi.GPIO --break-system-packages 2>/dev/null || true
 pip3 uninstall -y RPi.GPIO 2>/dev/null || true  # Remove user-installed version
 sudo apt remove -y python3-rpi.gpio 2>/dev/null || true
@@ -381,19 +456,36 @@ echo "- Local libraries installed and verified:"
 echo "    - RPi_Robot_Hat_Lib ($(get_dist_version rpi-robot-hat-lib))"
 echo "    - Ultrasonic_Sensor ($(get_dist_version ultrasonic-sensor-lib))"
 echo "    - IR_Sensor ($(get_dist_version ir-sensor-lib))"
-echo "- Interfaces enabled if needed: I2C, Camera"
-echo "- Permissions updated: added $USER to gpio,i2c,spi groups"
+echo "- System configuration:"
+echo "    - Pip installation restrictions removed (global packages enabled)"
+echo "    - Interfaces enabled: I2C, Camera"
+echo "    - Permissions updated: added $USER to gpio,i2c,spi groups"
 echo "- GPIO stack: removed conflicting RPi.GPIO; installed python3-rpi-lgpio (Pi 5 compatible)"
 echo "- I2C quick probe executed (if i2cdetect present)"
 if [ -n "${BMS_SETUP_RESULT}" ]; then
     echo "- BMS battery service: install ${BMS_SETUP_RESULT}; status: enabled=${BMS_ENABLED:-n/a}, active=${BMS_ACTIVE:-n/a}"
 fi
+if [ -n "${MCUPDATER_SETUP_RESULT}" ]; then
+    echo "- MCupdater auto-update service: install ${MCUPDATER_SETUP_RESULT}; status: enabled=${MCUPDATER_ENABLED:-n/a}, active=${MCUPDATER_ACTIVE:-n/a}"
+fi
 
 cat <<EOF
 ==============================================================
 Setup completed successfully!
+Installed components:
+- Hardware libraries and dependencies
+- GPIO and I2C interfaces configured  
+- BMS battery monitoring service (if available)
+- MCupdater repository auto-update service (runs at boot)
+
 Next steps:
     1) Reboot the Raspberry Pi: sudo reboot
-    2) After reboot, run your robot scripts from the MobileRobot directory
+    2) After reboot, your robot will automatically check for code updates
+    3) Run your robot scripts from the MobileRobot directory
+    
+MCupdater commands:
+    - Manual update: python3 RepoUpdater/updater.py --headless
+    - Service status: sudo systemctl status MCupdater.service
+    - Skip auto-update: export SKIP_REPO_AUTOUPDATE=1
 ==============================================================
 EOF
