@@ -11,7 +11,7 @@ adafruit-circuitpython-ssd1306  # OLED display
 smbus2                       # I2C communication
 numpy==1.26.4                # Numerical computing (compatible with TF 2.17/MediaPipe 0.10.x)
 packaging                    # Version comparison utilities
-opencv-contrib-python        # Computer vision (includes basic OpenCV)
+opencv-contrib-python==4.11.0.86  # Computer vision (compatible with numpy 1.26.4)
 Pillow                       # Image processing
 picamera2                    # Raspberry Pi camera (if not system-installed)
 Adafruit_Blinka==8.54.0      # conflicts with rpi-lgpio on Pi 5
