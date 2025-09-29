@@ -346,7 +346,8 @@ if [ -d "RepoUpdater" ]; then
     cd RepoUpdater
     if [ -f "setup.sh" ]; then
         echo "Running RepoUpdater/setup.sh to install MCupdater service..."
-        if sudo ./setup.sh; then
+        # Note: RepoUpdater/setup.sh handles sudo internally for service installation
+        if ./setup.sh; then
             MCUPDATER_SETUP_RESULT="success"
             echo "MCupdater service installation completed successfully"
         else

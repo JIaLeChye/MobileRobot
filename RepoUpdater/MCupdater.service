@@ -1,6 +1,6 @@
 [Unit]
 Description=Mobile Robot Code Updater Service
-After=network-online.target
+After=network-online.target NetworkManager-wait-online.service
 Wants=network-online.target
 
 
