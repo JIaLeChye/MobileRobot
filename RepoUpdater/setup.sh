@@ -66,7 +66,7 @@ if ! sudo grep -q '^WorkingDirectory=' "$SERVICE_PATH"; then
     sudo sed -i "/^\[Service\]/a WorkingDirectory=$(dirname "$UPDATER_SCRIPT")" "$SERVICE_PATH"
 fi
 if ! sudo grep -q '^ExecStart=' "$SERVICE_PATH"; then
-    sudo sed -i "/^\[Service\]/a ExecStart=/usr/bin/python3 $UPDATER_SCRIPT" "$SERVICE_PATH"
+    sudo sed -i "/^\[Service\]/a ExecStart=/usr/bin/python3 $UPDATER_SCRIPT --service" "$SERVICE_PATH"
 fi
 if ! sudo grep -q '^StandardOutput=' "$SERVICE_PATH"; then
     sudo sed -i "/^\[Service\]/a StandardOutput=file:$LOG_FILE_PATH/$STANDARD_OUTPUT" "$SERVICE_PATH"
@@ -87,7 +87,7 @@ sudo sed -i "s|^User=.*|User=$SERVICE_USER|" "$SERVICE_PATH" || {
 
 echo "Updating service file at $SERVICE_PATH..."
 # Update only within the [Service] section using sed range between [Service] and next section header
-sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^ExecStart=.*|ExecStart=/usr/bin/python3 $UPDATER_SCRIPT|" "$SERVICE_PATH" || {
+sudo sed -i "/^\\[Service\\]/,/^\\[/ s|^ExecStart=.*|ExecStart=/usr/bin/python3 $UPDATER_SCRIPT --service|" "$SERVICE_PATH" || {
     echo "Error: Failed to update ExecStart in $SERVICE_PATH."
     exit 1
 }
@@ -179,7 +179,78 @@ EOF
 chown "$SERVICE_USER":"$SERVICE_USER" "$AUTOSTART_FILE"
 echo "Desktop autostart entry created at $AUTOSTART_FILE"
 
-echo "Setup complete! The MCupdater service will run automatically when needed."
-echo "To manually trigger an update, run: sudo systemctl start $SERVICE_NAME"
-echo "To check logs, see: $LOG_FILE_PATH/$STANDARD_OUTPUT"
-echo "The GUI updater will also run on desktop login for user $SERVICE_USER."
+# Inject CLI auto updater block into .bashrc (idempotent)
+BASHRC_FILE="$USER_HOME/.bashrc"
+AUTO_BLOCK_START="# >>> MOBILE ROBOT AUTO UPDATE START >>>"
+AUTO_BLOCK_END="# <<< MOBILE ROBOT AUTO UPDATE END <<<"
+# Use the main updater script in headless mode for SSH sessions
+CLI_UPDATER_PATH="$UPDATER_SCRIPT"
+
+if [ ! -f "$CLI_UPDATER_PATH" ]; then
+    echo "Warning: updater.py not found at $CLI_UPDATER_PATH (auto SSH update will be skipped)."
+else
+    # Backup and clean .bashrc 
+    if [ -f "$BASHRC_FILE" ]; then
+        echo "Backing up existing .bashrc to $BASHRC_FILE.mobilebot.bak"
+        cp "$BASHRC_FILE" "$BASHRC_FILE.mobilebot.bak" || true
+        # Remove problematic lines that could hang the setup
+        sed -i '/sudo systemctl.*MCupdater/d' "$BASHRC_FILE" || true
+        sed -i '/checking Repository Update/d' "$BASHRC_FILE" || true
+    fi
+    # Remove existing block if present
+    if grep -q "$AUTO_BLOCK_START" "$BASHRC_FILE"; then
+        echo "Updating existing auto-update block in .bashrc"
+        # Use awk to strip existing block
+        awk -v start="$AUTO_BLOCK_START" -v end="$AUTO_BLOCK_END" '
+            $0 ~ start {flag=1; next} 
+            $0 ~ end {flag=0; next} 
+            !flag {print}
+        ' "$BASHRC_FILE" > "$BASHRC_FILE.tmp" && mv "$BASHRC_FILE.tmp" "$BASHRC_FILE"
+    else
+        echo "Adding auto-update block to .bashrc"
+    fi
+    echo "Adding auto-update block to .bashrc..."
+    {
+        echo "$AUTO_BLOCK_START"
+        echo "# Run repository CLI updater on interactive SSH login"  
+        echo "if [ -z \"\${SKIP_REPO_AUTOUPDATE}\" ] \\"
+        echo "   && [ -n \"\$SSH_CONNECTION\" ] \\"
+        echo "   && [ -t 0 ] && [ -t 1 ]; then"
+        echo "    # Avoid recursion if user sources .bashrc inside updater"
+        echo "    if [ -z \"\${INSIDE_REPO_AUTOUPDATE}\" ]; then"
+        echo "        INSIDE_REPO_AUTOUPDATE=1 python3 \"$CLI_UPDATER_PATH\" --headless || true"
+        echo "    fi"
+        echo "fi"
+        echo "# Show brief updater log summary"
+        echo "LOGFILE_DISPLAY_PATH=\"$LOG_FILE_PATH/$STANDARD_OUTPUT\""
+        echo "if [ -f \"\$LOGFILE_DISPLAY_PATH\" ]; then"
+        echo "    echo \"--- MCupdater current session log: ---\""
+        echo "    awk '/^\/----------.*---------\/\$/ {session=\$0; delete lines; n=0; next} {if(session) lines[++n]=\$0} END {if(session) {print \"   \" session; for(i=1;i<=n;i++) print \"   \" lines[i]}}' \"\$LOGFILE_DISPLAY_PATH\" | tail -n 15"
+        echo "    echo \"--- End of MCupdater log ---\""
+        echo "    # Status summary"
+        echo "    CURRENT_SESSION=\$(awk '/^\/----------.*---------\/\$/ {session=\$0; delete lines; n=0; next} {if(session) lines[++n]=\$0} END {if(session) for(i=1;i<=n;i++) print lines[i]}' \"\$LOGFILE_DISPLAY_PATH\")"
+        echo "    if echo \"\$CURRENT_SESSION\" | grep -q \"Repository updated successfully\\|Repo updated successfully\"; then"
+        echo "        echo \"✅ MCupdater: Repository updated\""
+        echo "    elif echo \"\$CURRENT_SESSION\" | grep -q \"Repository up to date\\|already up to date\"; then"
+        echo "        echo \"✅ MCupdater: Already up to date\""
+        echo "    elif echo \"\$CURRENT_SESSION\" | grep -qi \"network error\\|Network lost\\|Update skipped - no network\\|offline\\|timeout\\|could not resolve\"; then"
+        echo "        echo \"❌ MCupdater: Network issue\""
+        echo "    elif echo \"\$CURRENT_SESSION\" | grep -qi \"conflict\\|overwrite\\|Local changes conflict\"; then"
+        echo "        echo \"⚠️ MCupdater: File conflicts need attention\""
+        echo "    else"
+        echo "        echo \"ℹ️ MCupdater: Check log above for details\""
+        echo "    fi"
+        echo "else"
+        echo "    echo \"No MCupdater log found at \$LOGFILE_DISPLAY_PATH\""
+        echo "fi"
+        echo "$AUTO_BLOCK_END"
+    } >> "$BASHRC_FILE"
+    chown "$SERVICE_USER":"$SERVICE_USER" "$BASHRC_FILE" || true
+fi
+
+echo "Setup complete!"
+echo "- MCupdater systemd service installed: $SERVICE_NAME"
+echo "- CLI auto updater will run on SSH login (set SKIP_REPO_AUTOUPDATE=1 to skip)"
+echo "- GUI updater autostarts on desktop login"
+echo "To manually force update: python3 $UPDATER_SCRIPT --headless"
+echo "Logs: $LOG_FILE_PATH/$STANDARD_OUTPUT"

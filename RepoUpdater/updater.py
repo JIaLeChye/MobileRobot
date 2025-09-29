@@ -5,8 +5,35 @@ from tkinter import ttk
 import threading
 import logging
 import webbrowser
+import argparse
+import sys
 from datetime import datetime, timedelta, timezone
 import tkinter.messagebox
+
+# Network/offline detection keywords (stderr/stdout patterns)
+# Only include genuine network connectivity issues
+OFFLINE_KEYWORDS = [
+    "Could not resolve hostname",
+    "Temporary failure in name resolution", 
+    "network is unreachable",
+    "Name or service not known",
+    "Connection timed out",
+    "No route to host",
+    "Failed to connect",
+    "Connection refused",
+    "Host is down",
+    "Network timeout",
+    "fatal: unable to connect",
+    "Operation timed out",
+    "couldn't connect to host"
+]
+
+# Separate authentication/access errors (not network issues)
+ACCESS_ERROR_KEYWORDS = [
+    "Could not read from remote repository",
+    "Permission denied", 
+    "Authentication failed"
+]
 
 REPO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 HOME_DIR = os.path.expanduser('~')
@@ -14,13 +41,12 @@ DEBUG_DIR = os.path.join(HOME_DIR, 'Debug_log')
 os.makedirs(DEBUG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(DEBUG_DIR, 'updater_log.txt')
 
-# Setup logging
+# Setup logging - file only, no console spam
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
+        logging.FileHandler(LOG_FILE)
     ]
 )
 
@@ -37,6 +63,101 @@ def log_run_header():
     logging.info(header)
 
 log_run_header()
+
+def print_recent_logs(lines=10):
+    """Print only the most recent log entries to avoid console spam."""
+    try:
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, 'r') as f:
+                all_lines = f.readlines()
+                recent = all_lines[-lines:] if len(all_lines) > lines else all_lines
+                if recent:
+                    print("".join(recent).strip())
+    except Exception:
+        pass  # Silently handle any file read issues
+
+def test_network_connectivity():
+    """Test basic network connectivity to github.com and general internet"""
+    # Quick tests with short timeouts to avoid hanging
+    tests = [
+        # Test DNS resolution first (fastest)
+        (['nslookup', 'github.com'], 2),
+        # Test ping to github.com
+        (['ping', '-c', '1', '-W', '2', 'github.com'], 3),
+        # Test ping to Google DNS as fallback
+        (['ping', '-c', '1', '-W', '2', '8.8.8.8'], 3),
+    ]
+    
+    for cmd, timeout in tests:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode == 0:
+                return True
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            continue
+    
+    # All tests failed - no network connectivity
+    return False
+
+def is_network_error(combined_output):
+    """Check if the git output indicates a network connectivity issue (not auth/access)."""
+    if not combined_output:
+        return False
+    
+    output_lower = combined_output.lower()
+    
+    # Check for genuine network issues
+    has_network_error = any(keyword.lower() in output_lower for keyword in OFFLINE_KEYWORDS)
+    
+    # Check for authentication/permission errors (these are NOT network issues)
+    has_auth_error = any(keyword.lower() in output_lower for keyword in ACCESS_ERROR_KEYWORDS)
+    
+    # If it's clearly an authentication/permission error, it's not a network issue
+    if has_auth_error and not has_network_error:
+        return False
+    
+    # If we detect network-related keywords, verify with actual connectivity test
+    if has_network_error:
+        return not test_network_connectivity()
+    
+    # For "fatal: unable to access" messages, check if it's network vs auth related
+    if "fatal: unable to access" in output_lower:
+        # If it mentions network-related issues, it's likely network
+        if any(net_kw.lower() in output_lower for net_kw in OFFLINE_KEYWORDS):
+            return not test_network_connectivity()
+        # If it mentions auth issues, it's not network
+        if any(auth_kw.lower() in output_lower for auth_kw in ACCESS_ERROR_KEYWORDS):
+            return False
+        # For ambiguous cases, test actual connectivity
+        return not test_network_connectivity()
+    
+    # For other fatal errors, test connectivity to be sure
+    if "fatal:" in output_lower and not has_auth_error:
+        return not test_network_connectivity()
+    
+    return False
+
+def safe_input(prompt, default='r'):
+    """Safe input function that handles non-interactive environments.
+    
+    Args:
+        prompt: The input prompt to display
+        default: Default value to return if stdin is not available or interactive
+    
+    Returns:
+        User input or default value
+    """
+    if not sys.stdin.isatty():
+        # Non-interactive environment (e.g., systemd service)
+        print(f"{prompt}(non-interactive, using default: {default})")
+        return default
+    
+    try:
+        return input(prompt)
+    except EOFError:
+        # Fallback in case of EOF error
+        print(f"(EOF error, using default: {default})")
+        return default
 
 class UpdaterGUI:
     def __init__(self):
@@ -97,6 +218,21 @@ class UpdaterGUI:
         self.overwrite_btn = tk.Button(self.container, text="Overwrite (Force Update)", fg="white", bg="red",
                                        command=self.overwrite_conflicts)
         self.overwrite_btn.pack_forget()
+        
+        # Network error buttons
+        self.network_btn_frame = tk.Frame(self.container)
+        self.retry_btn = tk.Button(self.network_btn_frame, text="Retry", fg="white", bg="green", width=15,
+                                   command=self.retry_update)
+        self.retry_btn.pack(side=tk.LEFT, padx=5)
+        self.skip_btn = tk.Button(self.network_btn_frame, text="Skip Update", fg="white", bg="orange", width=15,
+                                  command=self.skip_update)
+        self.skip_btn.pack(side=tk.LEFT, padx=5)
+        self.network_btn_frame.pack_forget()
+        
+        # Retry counter for network errors
+        self.network_retry_count = 0
+        self.max_network_retries = 3
+        
         self.hide_conflicts()
 
     def show_conflicts(self, files=None, message=None):
@@ -140,8 +276,64 @@ class UpdaterGUI:
         self.conflict_label.config(text="")
         self.conflict_list_container.pack_forget()
         self.overwrite_btn.pack_forget()
+        self.network_btn_frame.pack_forget()
         if not self.btn_frame.winfo_ismapped():
             self.btn_frame.pack(pady=8)
+
+    def show_network_error(self, message="Network connectivity issue detected."):
+        """Show network error UI with retry and skip options."""
+        # Hide action buttons while showing network error
+        if self.btn_frame.winfo_ismapped():
+            self.btn_frame.pack_forget()
+        
+        # Hide conflict UI
+        self.conflict_list_container.pack_forget()
+        self.overwrite_btn.pack_forget()
+        
+        # Show network error message
+        self.conflict_label.config(text=message)
+        
+        # Show retry/skip buttons
+        self.network_btn_frame.pack(pady=10)
+        self.root.update_idletasks()
+
+    def hide_network_error(self):
+        """Hide network error UI."""
+        self.network_btn_frame.pack_forget()
+        self.conflict_label.config(text="")
+        if not self.btn_frame.winfo_ismapped():
+            self.btn_frame.pack(pady=8)
+
+    def retry_update(self):
+        """Retry the update process with limits."""
+        self.network_retry_count += 1
+        
+        if self.network_retry_count >= self.max_network_retries:
+            self.set_status("❌ Maximum retries reached. Update failed.", progress=100)
+            logging.error("GUI update failed after maximum network retries.")
+            self.hide_network_error()
+            self.close_after(5)
+            return
+            
+        # Check network connectivity before retry
+        if not test_network_connectivity():
+            self.set_status("❌ No network connectivity. System is offline.", progress=100)
+            self.show_network_error(f"No network connectivity detected.\nSystem appears to be offline.\n\nRetry attempts: {self.network_retry_count}/{self.max_network_retries}")
+            logging.warning("GUI retry failed - no network connectivity.")
+            return
+            
+        self.hide_network_error()
+        self.set_status(f"Retrying update... (attempt {self.network_retry_count + 1}/{self.max_network_retries + 1})", progress=10)
+        
+        # Start the update process again in a new thread
+        t = threading.Thread(target=update_repo, args=(self,), daemon=True)
+        t.start()
+
+    def skip_update(self):
+        """Skip the update and close the GUI."""
+        self.set_status("Update skipped due to network issue.", progress=100)
+        logging.info("Update skipped by user due to network issue.")
+        self.close_after(3)
 
     def set_status(self, msg, progress=None):
         self.label.config(text=msg)
@@ -199,18 +391,65 @@ def update_repo(gui: UpdaterGUI):
         logging.info("Starting update process.")
         gui.set_status("Checking for updates...", progress=0)
         gui.hide_conflicts()
+        
+        # Reset retry counter for new update attempt
+        if not hasattr(gui, 'network_retry_count'):
+            gui.network_retry_count = 0
+            
+        # Check network connectivity first
+        gui.set_status("Checking network connectivity...", progress=5)
+        if not test_network_connectivity():
+            gui.set_status("❌ No network connectivity detected.", progress=50)
+            gui.show_network_error("No network connectivity detected.\nSystem appears to be offline.\nPlease check your internet connection.")
+            logging.warning("GUI update failed - no network connectivity.")
+            return
         gui.set_status("Fetching updates...", progress=25)
         logging.info("Running: git fetch")
-        fetch_result = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True)
-        logging.info(f"git fetch stdout: {fetch_result.stdout.strip()}")
-        if fetch_result.stderr:
-            logging.warning(f"git fetch stderr: {fetch_result.stderr.strip()}")
+        
+        # Try fetch with timeout and network error detection
+        try:
+            fetch_result = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True, timeout=60)
+            logging.info(f"git fetch stdout: {fetch_result.stdout.strip()}")
+            if fetch_result.stderr:
+                logging.warning(f"git fetch stderr: {fetch_result.stderr.strip()}")
+                
+            # Check for network errors during fetch
+            combined_fetch = (fetch_result.stdout or '') + "\n" + (fetch_result.stderr or '')
+            if is_network_error(combined_fetch):
+                gui.set_status("Network connectivity issue detected during fetch.", progress=50)
+                gui.show_network_error("Network connectivity issue detected during fetch.\nPlease check your internet connection and try again.")
+                logging.error("Network connectivity issue detected during fetch.")
+                return
+                
+        except subprocess.TimeoutExpired:
+            gui.set_status("Network timeout during fetch.", progress=50)
+            gui.show_network_error("Network timeout occurred during fetch.\nPlease check your internet connection and try again.")
+            logging.error("Network timeout during fetch.")
+            return
+            
         gui.set_status("Pulling latest changes...", progress=75)
         logging.info("Running: git pull")
-        pull_result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True)
-        logging.info(f"git pull stdout: {pull_result.stdout.strip()}")
-        if pull_result.stderr:
-            logging.warning(f"git pull stderr: {pull_result.stderr.strip()}")
+        
+        # Try pull with timeout and network error detection
+        try:
+            pull_result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True, timeout=120)
+            logging.info(f"git pull stdout: {pull_result.stdout.strip()}")
+            if pull_result.stderr:
+                logging.warning(f"git pull stderr: {pull_result.stderr.strip()}")
+                
+            # Check for network errors during pull
+            combined_pull = (pull_result.stdout or '') + "\n" + (pull_result.stderr or '')
+            if is_network_error(combined_pull):
+                gui.set_status("Network connectivity issue detected during pull.", progress=75)
+                gui.show_network_error("Network connectivity issue detected during pull.\nPlease check your internet connection and try again.")
+                logging.error("Network connectivity issue detected during pull.")
+                return
+                
+        except subprocess.TimeoutExpired:
+            gui.set_status("Network timeout during pull.", progress=75)
+            gui.show_network_error("Network timeout occurred during pull.\nPlease check your internet connection and try again.")
+            logging.error("Network timeout during pull.")
+            return
 
         conflict_keywords = [
             "would be overwritten by merge",
@@ -277,39 +516,276 @@ def update_repo(gui: UpdaterGUI):
         logging.error(f"Error during update: {e}", exc_info=True)
 
 def headless_update():
+    """Interactive headless updater with retry/overwrite options."""
+    # Detect if we're in boot process (no real terminal available)
+    is_boot_time = not (sys.stdin.isatty() and os.environ.get('TERM') and os.environ.get('USER'))
+    
+    if is_boot_time:
+        # Boot-time mode: fast, non-interactive, no retries
+        return headless_update_boot()
+    
+    # Normal interactive headless mode
+
+    print("🔄 Checking for repository updates...")
+    
     try:
         logging.info("Starting update process (headless mode).")
-        subprocess.run(["git", "fetch"], cwd=REPO_PATH, check=True)
-        logging.info("Running: git pull")
-        result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True)
-        logging.info(f"git pull output: {result.stdout.strip()}")
-        conflict_files = get_conflict_files()
-        if conflict_files:
-            logging.warning(f"Merge conflicts: {conflict_files}")
-            logging.warning("Merge conflict detected! Please resolve manually or run the updater in GUI mode to use the overwrite option.")
-            print("Merge conflict detected! Files:")
-            for f in conflict_files:
-                print(f" - {f}")
-            print("Resolve manually or run updater.py in GUI mode to force overwrite.")
+        
+        # Check network connectivity first to avoid endless retries
+        if not test_network_connectivity():
+            print("❌ No network - update skipped")
+            logging.warning("Update skipped - no network connectivity.")
             return
-        if "Already up to date" in result.stdout:
-            logging.info("Repo is already up to date.")
-        else:
-            logging.info("Repo updated successfully.")
+        
+        # Fetch with retry limit
+        max_fetch_retries = 3
+        fetch_attempts = 0
+        
+        while fetch_attempts < max_fetch_retries:
+            fetch_attempts += 1
+            
+            try:
+                fetch_result = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True, timeout=30)
+                combined_fetch = (fetch_result.stdout or '') + "\n" + (fetch_result.stderr or '')
+                
+                if is_network_error(combined_fetch):
+                    if fetch_attempts >= max_fetch_retries:
+                        print("❌ Network error - update failed")
+                        logging.error("Fetch failed after maximum retries due to network issues.")
+                        return
+                    
+                    # Quick network re-check before retry
+                    if not test_network_connectivity():
+                        print("❌ Network lost - update skipped")
+                        logging.warning("Network connectivity lost during fetch retries.")
+                        return
+                    
+                    # Auto-retry network errors without user prompt
+                    print(f"Network error - retrying... ({max_fetch_retries - fetch_attempts} attempts left)")
+                    import time
+                    time.sleep(2)  # Brief delay before retry
+                    continue
+                else:
+                    break  # Fetch successful
+                    
+            except subprocess.TimeoutExpired:
+                if fetch_attempts >= max_fetch_retries:
+                    print("❌ Timeout - update failed")
+                    logging.error("Fetch failed after maximum retries due to timeouts.")
+                    return
+                    
+                # Auto-retry timeout errors
+                print(f"Timeout - retrying... ({max_fetch_retries - fetch_attempts} attempts left)")
+                import time
+                time.sleep(2)  # Brief delay before retry
+                continue
+        
+        # Pull with conflict handling and retry limits
+        max_pull_retries = 3
+        pull_attempts = 0
+        
+        while pull_attempts < max_pull_retries:
+            pull_attempts += 1
+            logging.info("Running: git pull")
+            
+            try:
+                result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True, timeout=60)
+                logging.info(f"git pull output: {result.stdout.strip()}")
+                if result.stderr:
+                    logging.warning(f"git pull stderr: {result.stderr.strip()}")
+                
+                combined = (result.stdout or '') + "\n" + (result.stderr or '')
+                
+                # FIRST: Check for network errors (highest priority)
+                if is_network_error(combined):
+                    if pull_attempts >= max_pull_retries:
+                        print("❌ Network error - update failed")
+                        logging.error("Pull failed after maximum retries due to network issues.")
+                        return
+                        
+                    # Quick network re-check before retry
+                    if not test_network_connectivity():
+                        print("❌ Network lost - update skipped")
+                        logging.warning("Network connectivity lost during pull retries.")
+                        return
+                    
+                    # Auto-retry network errors without user prompt
+                    print(f"Network error - retrying... ({max_pull_retries - pull_attempts} attempts left)")
+                    import time
+                    time.sleep(3)  # Longer delay for pull retries
+                    continue
+                
+                # SECOND: Check if git command failed but it's not a network issue
+                if result.returncode != 0:
+                    # Additional network check for generic failures
+                    if not test_network_connectivity():
+                        print("❌ Network connectivity lost - update skipped")
+                        logging.warning("Git command failed and network connectivity lost.")
+                        return
+                        
+                    # Check for specific conflict-related errors
+                    conflict_keywords = [
+                        'would be overwritten by merge',
+                        'Please commit your changes or stash them before you merge',
+                        'Aborting',
+                        'divergent branches',
+                        'Need to specify how to reconcile divergent branches'
+                    ]
+                    
+                    has_conflict = any(kw in (result.stderr or '') for kw in conflict_keywords)
+                    
+                    if has_conflict:
+                        conflict_files = get_conflict_files()
+                        print("⚠️  Local changes conflict with update")
+                        if conflict_files:
+                            print(f"Files: {', '.join(conflict_files[:3])}")
+                            if len(conflict_files) > 3:
+                                print(f"... and {len(conflict_files) - 3} more")
+                        
+                        choice = input("Fix: [o]verwrite local changes / [s]kip update? ").strip().lower() or 's'
+                        if choice.startswith('o'):
+                            if _cli_overwrite_flow():
+                                print("✅ Repository updated (local changes overwritten)")
+                                logging.info("Repo updated successfully via overwrite.")
+                                return
+                            else:
+                                continue
+                        else:
+                            print("Update skipped")
+                            return
+                    else:
+                        # Generic git error - could be network, so retry
+                        if pull_attempts >= max_pull_retries:
+                            print(f"❌ Git error - update failed: {result.stderr.strip()}")
+                            logging.error(f"Pull failed after maximum retries: {result.stderr.strip()}")
+                            return
+                            
+                        # Auto-retry generic git errors (often network-related)
+                        print(f"Git error - retrying... ({max_pull_retries - pull_attempts} attempts left)")
+                        import time
+                        time.sleep(3)
+                        continue
+                else:
+                    # Success case
+                    if "Already up to date" in result.stdout:
+                        print("✅ Repository up to date")
+                        logging.info("Repo is already up to date.")
+                    else:
+                        print("✅ Repository updated successfully!")
+                        logging.info("Repo updated successfully.")
+                    return
+                    
+            except subprocess.TimeoutExpired:
+                if pull_attempts >= max_pull_retries:
+                    print("❌ Timeout - update failed")
+                    logging.error("Pull failed after maximum retries due to timeouts.")
+                    return
+                    
+                # Auto-retry timeout errors
+                print(f"Timeout - retrying... ({max_pull_retries - pull_attempts} attempts left)")
+                import time
+                time.sleep(3)
+                continue
+                    
     except Exception as e:
         logging.error(f"Error during update: {e}", exc_info=True)
+        print(f"❌ Update failed: {e}")
+
+def _cli_overwrite_flow():
+    """Handle the overwrite flow for CLI mode."""
+    try:
+        # Reset to remote state
+        subprocess.run(['git', 'reset', '--hard', 'HEAD'], cwd=REPO_PATH, check=True)
+        subprocess.run(['git', 'clean', '-fd'], cwd=REPO_PATH, check=True)
+        subprocess.run(['git', 'pull'], cwd=REPO_PATH, check=True)
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Overwrite failed: {e}")
+        logging.error(f"Overwrite failed: {e}")
+        return False
 
 def is_gui_available():
     return os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
 
+def headless_update_boot():
+    """Boot-time update mode: fast, non-interactive, no blocking."""
+    try:
+        logging.info("Starting update process (boot-time mode).")
+        
+        # Quick network check with very short timeout
+        try:
+            subprocess.run(['ping', '-c', '1', '-W', '1', '8.8.8.8'], 
+                         capture_output=True, timeout=2)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            logging.info("No network during boot - skipping update.")
+            return
+        
+        # Fast fetch with short timeout
+        try:
+            subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, 
+                         text=True, timeout=10)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            logging.info("Fetch failed during boot - skipping update.")
+            return
+            
+        # Fast pull with short timeout  
+        try:
+            result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, 
+                                  text=True, timeout=10)
+            if "Already up to date" in result.stdout:
+                logging.info("Repo is already up to date.")
+            elif result.returncode == 0:
+                logging.info("Repo updated successfully during boot.")
+            else:
+                logging.info("Update issues during boot - continuing boot process.")
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            logging.info("Pull failed during boot - continuing boot process.")
+            
+    except Exception as e:
+        logging.info(f"Boot update failed: {e} - continuing boot process.")
+
+def headless_update_service():
+    """Non-interactive service mode for systemd."""
+    try:
+        logging.info("Starting update process (service mode).")
+        subprocess.run(["git", "fetch"], cwd=REPO_PATH, check=True, timeout=60)
+        logging.info("Running: git pull")
+        result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True, timeout=120)
+        logging.info(f"git pull output: {result.stdout.strip()}")
+        
+        if "Already up to date" in result.stdout:
+            logging.info("Repo is already up to date.")
+        elif result.returncode == 0:
+            logging.info("Repo updated successfully.")
+        else:
+            logging.warning(f"Update may have issues: {result.stderr.strip()}")
+            
+    except subprocess.TimeoutExpired:
+        logging.error("Service update timed out.")
+    except Exception as e:
+        logging.error(f"Error during service update: {e}", exc_info=True)
+
 def main():
+    parser = argparse.ArgumentParser(description='MobileRobot Repo Updater')
+    parser.add_argument('--service', action='store_true', help='Run non-interactive service mode')
+    parser.add_argument('--headless', action='store_true', help='Run interactive headless mode')
+    args = parser.parse_args()
+
+    if args.service:
+        headless_update_service()
+        return
+    elif args.headless:
+        headless_update()
+        return
+
+    # Default behavior: GUI when available, otherwise headless
     if is_gui_available():
         gui = UpdaterGUI()
         t = threading.Thread(target=update_repo, args=(gui,), daemon=True)
         t.start()
         gui.run()
     else:
-        print("No GUI detected. Running in headless mode.")
         headless_update()
 
 if __name__ == "__main__":

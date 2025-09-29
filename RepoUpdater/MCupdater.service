@@ -6,14 +6,20 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=username
-Environment=MCUPDATER_LOG_DIR=/home/user/Debug_log
-WorkingDirectory=/path/to/updater.py
-ExecStart=/usr/bin/python3 /path/to/updater.py
+User=vboxuser
+Environment=MCUPDATER_LOG_DIR=/home/vboxuser/Debug_log
+WorkingDirectory=/home/vboxuser/Desktop/MobileRobot/RepoUpdater
+ExecStart=/usr/bin/python3 /home/vboxuser/Desktop/MobileRobot/RepoUpdater/updater.py --service
 # Default to journald; setup.sh will overwrite with Debug_log log files
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=300
+TimeoutStopSec=30
+KillMode=mixed
+Restart=on-failure
+RestartSec=60
+StartLimitInterval=3600
+StartLimitBurst=5
 RemainAfterExit=yes
 
 [Install]
