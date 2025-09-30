@@ -1,332 +1,319 @@
-# MobileRobot 🤖
+# MobileRobot
 
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](./version.py)
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204%2F5-red.svg)](https://raspberrypi.org)
 
 
-A comprehensive mobile robot control system designed for Raspberry Pi 4/5 with advanced computer vision, autonomous navigation, and remote control capabilities.
-## 📋 Table of Contents
-- [🚀 Features](#-features)
-- [⚡ Quick Start](#-quick-start)
-- [📁 Repository Structure](#-repository-structure)
-- [🔧 Installation](#-installation)
-- [📱 User Applications](#-user-applications)
-- [📚 Libraries](#-libraries)
-- [📖 Version Control & Changelog](#-version-control--changelog)
-- [📖 Documentation](#-documentation)
-- [📞 Support](#-support)
-
-## 🚀 Features
+## Features
 
 ### Core Functionality
-- **Motor Control**: Precise 4-wheel mecanum drive control with enhanced encoder feedback and calibration
-- **Computer Vision**: Object tracking, recognition, and QR/AprilTag detection with automatic model downloads
-- **Autonomous Navigation**: Line following and obstacle avoidance
-- **Remote Control**: Mobile app integration via Blynk platform
-- **Sensor Integration**: Ultrasonic, IR, line sensors, and camera
-- **Real-time Monitoring**: OLED display and advanced battery management system
+- Motor control with encoder feedback
+- Computer vision: object tracking, recognition, QR and AprilTag detection
+- Autonomous navigation: line following and obstacle avoidance
+- Remote control via Blynk mobile app
+- Sensor integration: ultrasonic, IR, line sensors, and camera
+- OLED display and battery management
 
-### Advanced Capabilities
-- **Hand Gesture Control**: OpenCV-based gesture recognition
-- **TensorFlow Integration**: Object detection and classification with automatic setup
-- **Multiple Navigation Modes**: Sensor-based and vision-based navigation
-- **Hardware Abstraction**: Clean API for all robot functions
-- **Automatic Setup**: Self-downloading models and configuration files
-- **Per-Motor Calibration**: Individual motor tuning for improved accuracy
+### Additional Capabilities
+- Hand gesture control (OpenCV-based)
+- TensorFlow and TensorFlow Lite object detection
+- Multiple navigation modes (sensor and vision based)
 
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Repository Structure](#repository-structure)
+- [User Applications](#user-applications)
+- [Libraries](#libraries)
+- [Documentation](#documentation)
+- [Maintenance & Diagnostics](#maintenance--diagnostics)
+- [Release Notes](#release-notes)
 
-## ⚡ Quick Start
+## Quick Start
 
-### 📥 Download & Setup
-
-1. **Download the repository**:
+1. Clone the repository:
    ```bash
    git clone https://github.com/JIaLeChye/MobileRobot.git
    cd MobileRobot
    ```
-
-2. **Run the automatic setup**:
+2. Run the setup script:
    ```bash
    chmod +x setup.sh
    ./setup.sh
    ```
-   
-   This script will:
-   - ✅ Install all required Python packages
-   - ✅ Set up the robot control libraries
-   - ✅ Configure hardware interfaces
-   - ✅ Test the installation
+3. Example usage:
+   ```bash
+   cd Motor_and_Encoder
+   python3 Motor_and_Encoder.py
+   ```
 
-### 🎮 Explore the Examples
-
-After setup, you can run any example directly:
-
-```bash
-# Motor control basics
-cd Motor_and_Encoder
-python3 Motor_and_Encoder.py
-
-# Line following with camera
-cd Line_Following/With_OpenCV
-python3 Line_Following.py
-
-# Object tracking
-cd Object_Tracking/Color_Based
-python3 Color_Based_Tracking.py
-
-# Remote control via mobile app
-cd Mobile_Controller/Mobile_Controller
-python3 Mobile_Controller.py
-```
-
-### 🔧 Customization
-All examples are designed to be easily modified:
-1. Open any Python file in your favorite editor
-2. Modify parameters, thresholds, or behavior
-3. Run the modified code to see changes
-
-### 🆘 Need Help?
-
-1. Check the jupyter notebook in each folder
-2. Look at the code comments for explanations
-3. Start with simple examples before complex ones
-4. Use the Libraries/ folder to understand core functions
-
-## 📁 Repository Structure
-
-The repository is organized by functionality to make it easy to explore:
+## Repository Structure
 
 ```
 MobileRobot/
-├── 📖 README.md                    # This file - start here!
-├── ⚡ setup.sh                     # One-click installation script
-├── � reset.sh                     # System reset and cleanup script
-├── 🧪 self-test.py                 # Hardware validation and testing
-├── ⚙️ Encoder_Calibration.py       # Motor encoder calibration utility
-├── �📋 requirements.txt             # Python dependencies
-├── 📊 version.py                   # Version management and information
-│
-├── 🚗 Motor_and_Encoder/           # Basic motor control with encoders
-├── 🎯 Line_Following/              # Line following algorithms
-│   ├── With_OpenCV/                # Vision-based line following
-│   └── With_Sensors/               # Sensor-based line following
-├── 🚧 Obstacle_Avoidance/          # Obstacle detection and avoidance
-│   ├── with_camera/                # Vision-based avoidance
-│   └── without_camera/             # Sensor-based avoidance
-├── 👁️ Object_Tracking/             # Object detection and tracking
-│   ├── Color_Based/                # Color-based tracking
-│   └── KCF_Tracler/                # Advanced KCF tracking algorithms
-├── 🎯 Object_Tracking_with_Avoidance/ # Combined tracking and navigation
-├── 🤖 Object-Recofnition(TF)/      # TensorFlow object recognition
-├── 🤖 Object-Recognition(TFLite)/  # TensorFlow Lite object recognition
-├── 📱 Mobile_Controller/           # Remote control via mobile app
-│   ├── Mobile_Controller/          # Basic mobile control
-│   └── With_Obstacle_Alert/        # Enhanced control with obstacle detection
-├── 👋 Hand-Gesture/                # Gesture-based control
-├── 🏷️ April_Tag_Recognition/       # AprilTag detection and tracking
-├── 📷 QR_Code_Recognition/         # QR code detection
-├── 🎨 HSV_Color_Picker/            # Color calibration tool
-├── 🔋 BMS/                         # Battery management system
-│
-└── 📚 Libraries/                   # Core robot libraries
-    ├── RPi_Robot_Hat_Lib/          # Main robot control library
-    ├── Ultrasonic_Sensor/          # Distance sensor library
-    └── IR_Sensor/                  # Infrared sensor library
+├── README.md                     # Project documentation
+├── setup.sh                      # Installation script
+├── reset.sh                      # Reset / cleanup script
+├── requirements.txt              # Python dependencies
+├── version.py                    # Project version info
+├── self-test.py                  # Hardware/self test script
+├── Encoder_Calibration.py        # Encoder calibration utility
+├── Motor_and_Encoder/            # Motor control and encoder examples
+├── Line_Following/               # Line following (OpenCV / sensors)
+│   ├── With_OpenCV/
+│   └── With_Sensors/
+├── Obstacle_Avoidance/           # Obstacle avoidance examples
+│   ├── with_camera/
+│   └── without_camera/
+├── Object_Tracking/              # Object tracking (color, KCF)
+│   ├── Color_Based/
+│   └── KCF_Tracler/              # (typo in folder name; intended: KCF_Tracker)
+├── Object-Recofnition(TF)/       # TensorFlow object recognition (folder name typo)
+├── Object-Recognition(TFLite)/   # TensorFlow Lite object recognition
+├── Object_Tracking_with_Avoidance/ # Tracking combined with avoidance
+├── Mobile_Controller/            # Remote control via mobile app
+├── Hand-Gesture/                 # Gesture control
+├── April_Tag_Recognition/        # AprilTag detection
+├── QR_Code_Recognition/          # QR code detection
+├── HSV_Color_Picker/             # Color calibration tool
+├── BMS/                          # Battery management system
+├── Libraries/                    # Core libraries
+│   ├── RPi_Robot_Hat_Lib/
+│   ├── Ultrasonic_Sensor/
+│   └── IR_Sensor/
+└── RepoUpdater/                  # (utility / maintenance, optional to document)
 ```
 
-### 🎯 How to Use This Repository
-
-1. **🚀 Start with setup.sh** - Installs everything automatically
-2. **📚 Check Libraries/** - Core functionality for all applications  
-3. **🎮 Explore Applications** - Each folder contains working examples
-4. **📖 Read Documentation** - Each folder has its own README
-5. **🔧 Customize** - Modify examples for your specific needs
+Note: Folder names with typos (e.g. `Object-Recofnition(TF)`, `KCF_Tracler`) are shown exactly as they exist. Rename them for clarity if you update scripts that reference them.
 
 
-## 🔧 Installation
+## Installation
 
 ### Automated Setup (Recommended)
-The `setup.sh` script automatically installs all dependencies and configures your Raspberry Pi:
-
+Run the provided setup script to install all dependencies and configure your Raspberry Pi:
 ```bash
-# Download and run setup
-wget https://raw.githubusercontent.com/JIaLeChye/MobileRobot/master/setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
 
 ### Manual Installation
-<details>
-<summary>Click to expand manual installation steps</summary>
-
-1. **Update system**:
+1. Update system:
    ```bash
    sudo apt update && sudo apt upgrade -y
    ```
-
-2. **Install system dependencies**:
+2. Install dependencies:
    ```bash
    sudo apt install -y python3-pip python3-venv i2c-tools git cmake build-essential
    ```
-
-3. **Enable hardware interfaces**:
+3. Enable hardware interfaces:
    ```bash
    sudo raspi-config nonint do_i2c 0
    sudo raspi-config nonint do_camera 0
    ```
-
-4. **Install Python packages**:
+4. Install Python packages:
    ```bash
    pip install -r requirements.txt
    ```
-
-5. **Install robot library**:
+5. Install robot library:
    ```bash
-   cd RPi_Robot_Hat_Lib
+   cd Libraries/RPi_Robot_Hat_Lib
    pip install .
    ```
-</details>
 
-## 📱 User Applications
+## User Applications
 
 ### Navigation & Control
-| Application | Description | Hardware Required |
-|-------------|-------------|-------------------|
-| **Line_Following** | Autonomous line following with OpenCV and sensors | Camera, Line sensors |
-| **Obstacle_Avoidance** | Autonomous navigation with obstacle detection | Ultrasonic sensors |
-| **Mobile_Controller** | Remote control via smartphone app | Blynk platform |
-| **Hand_Gesture** | Gesture-based robot control | Camera |
+| Application           | Description                                 | Hardware Required         |
+|----------------------|---------------------------------------------|--------------------------|
+| Line_Following       | Line following (OpenCV/sensor-based)        | Camera, Line sensors     |
+| Obstacle_Avoidance   | Obstacle detection and avoidance            | Ultrasonic sensors       |
+| Mobile_Controller    | Remote control via smartphone app           | Blynk platform           |
+| Hand_Gesture         | Gesture-based robot control                 | Camera                   |
 
 ### Computer Vision
-| Application | Description | Hardware Required |
-|-------------|-------------|-------------------|
-| **Object_Tracking** | Real-time object tracking and following | Camera |
-| **Object_Recognition** | TensorFlow-based object detection | Camera |
-| **QR_Code_Recognition** | QR code detection and processing | Camera |
-| **April_Tag_Recognition** | AprilTag detection for navigation | Camera |
+| Application           | Description                                 | Hardware Required         |
+|----------------------|---------------------------------------------|--------------------------|
+| Object_Tracking      | Real-time object tracking                   | Camera                   |
+| Object_Recognition   | Object detection (TensorFlow/TFLite)        | Camera                   |
+| QR_Code_Recognition  | QR code detection and processing            | Camera                   |
+| April_Tag_Recognition| AprilTag detection for navigation           | Camera                   |
 
 ### Utilities
-| Application | Description | Hardware Required |
-|-------------|-------------|-------------------|
-| **Motor_and_Encoder** | Motor control and encoder testing | Motors, Encoders |
-| **HSV_Color_Picker** | Color calibration tool for vision | Camera |
-| **BMS** | Battery monitoring system | Battery sensor |
+| Application           | Description                                 | Hardware Required         |
+|----------------------|---------------------------------------------|--------------------------|
+| Motor_and_Encoder    | Motor control and encoder testing           | Motors, Encoders         |
+| HSV_Color_Picker     | Color calibration tool                      | Camera                   |
+| BMS                  | Battery monitoring system                   | Battery sensor           |
+| RepoUpdater          | Automated repository update utility         | None                     |
 
-## 📚 Libraries
+## Libraries
 
 ### Core Libraries
-- **RPi_Robot_Hat_Lib**: Main robot control library
-- **Ultrasonic_Sensor**: Distance measurement and obstacle detection
-- **IR_Sensor**: Infrared obstacle detection
-- **Motor_Encoder**: Precise motor control with encoder feedback
+- RPi_Robot_Hat_Lib: Main robot control library
+- Ultrasonic_Sensor: Distance measurement and obstacle detection
+- IR_Sensor: Infrared obstacle detection
 
-### Dependencies
-- **OpenCV**: Computer vision and image processing
-- **TensorFlow**: Machine learning and object recognition
-- **Blynk**: Mobile app connectivity
-- **Adafruit Libraries**: Hardware interfacing (OLED, PCA9685)
+### Maintenance / Services
+- BMS: Battery management system (monitoring, logging, optional service)
+- RepoUpdater: Automated repository update helper (script + optional systemd service)
 
-### Coding Standards
-- Follow PEP 8 for Python code
-- Include docstrings for all functions
-- Test on hardware before submitting
-- Update documentation as needed
+### Main Dependencies
+- OpenCV: Computer vision and image processing
+- TensorFlow/TensorFlow Lite: Machine learning and object recognition
+- Blynk: Mobile app connectivity
+- Adafruit libraries: Hardware interfacing
 
-## 📖 Version Control & Changelog
+## Version Control
 
-This project follows [Semantic Versioning](https://semver.org/) with **automatic version management**:
-- **Major.Minor.Patch** (e.g., 1.2.3)
+This project uses [Semantic Versioning](https://semver.org/): Major.Minor.Patch (e.g., 1.2.3)
 
-### 🆕 Recent Updates (Version 2.1.0)
+### Library Versions
 
-#### New Features & Improvements
-- **🤖 Enhanced Object Recognition**: Added automatic model and label file download functionality
-  - **TensorFlow Lite**: `download_if_missing()` and `ensure_dir_exists()` functions for automatic model setup
-  - **TensorFlow (Full)**: `ensure_model_present()` and `ensure_label_map_present()` functions
-  - **Auto-Download**: Missing model files are automatically downloaded from GitHub repositories
-  - **Robust Error Handling**: Better error messages and fallback mechanisms for network issues
+Current library versions (auto-managed by the workflow `library-version-updater.yml`). Do not manually edit the version numbers on the lines below—automation searches for the pattern `**Name**: x.y.z` and patches them when source files change.
 
-- **⚙️ Enhanced Motor Control**: Improved motor calibration and distance tracking
-  - **Per-Motor Calibration**: Individual motor calibration data storage in `~/.config/mobile_robot/`
-  - **Encoder Calibration Tool**: New `Encoder_Calibration.py` for precise distance measurements
-  - **Improved Accuracy**: Better encoder handling and distance calculations
+**RPi_Robot_Hat_Lib**: 1.2.16  
+**Ultrasonic_Sensor**: 1.0.4  
+**IR_Sensor**: 1.0.4  
 
-- **🔋 Battery Management System**: Enhanced monitoring and logging capabilities
-  - **Advanced Logging**: Structured logging system with timestamps and function names
-  - **System Service**: Battery monitoring can run as a systemd service
-  - **OLED Display**: Real-time battery status display integration
+Legacy module filenames referenced in code:
+- `Ultrasonic_sens.py` (main implementation file inside `Ultrasonic_Sensor`)
+- `IRSens.py` (main implementation file inside `IR_Sensor`)
 
-- **🛠️ Development Improvements**: Better testing and validation
-  - **Enhanced Self-Test**: Improved camera and I2C device testing
-  - **OpenCV Integration**: Better camera testing with OpenCV functionality
-  - **Error Detection**: More comprehensive hardware validation
+If you bump MINOR or MAJOR versions manually, ensure consistency across:
+1. The library's `setup.py` `version=` field
+2. Any `self.lib_ver` or `__version__` attributes inside the main Python module
+3. These README lines (only if automation is not triggered)
 
-### Current Library Versions
-- **RPi_Robot_Hat_Lib**: 1.2.16
-- **Ultrasonic_sens**: 1.0.4
-- **IRSens**: 1.0.4
+Patch bumps (third digit) are automatic when meaningful library `.py` files change.
 
+## Documentation
+Primary reference materials are provided as Jupyter notebooks within the repository. Open them in JupyterLab, VS Code, or `jupyter notebook`.
 
-### Files Managed
-- `Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.py` - Main library with version string
-- `Libraries/RPi_Robot_Hat_Lib/setup.py` - Package setup with version
-- `Libraries/Ultrasonic_Sensor/setup.py` - Sensor library setup
-- `Libraries/IR_Sensor/setup.py` - IR sensor library setup
--
+### Core Systems
+- Motor & Encoder: `Motor_and_Encoder/Motor_and_Encoder.ipynb`
+- Battery Management: `BMS/Battery.ipynb`
+- Battery Service Setup: `BMS/battery.service.ipynb`
 
-### Benefits
-- **No manual version tracking** - Automatic patch increments
-- **Consistent versioning** - All related files stay in sync  
-- **Git integration** - Works seamlessly with your workflow
-- **Flexible control** - Manual override for major/minor versions
-- **Clear history** - Version changes are tracked in Git commits
+### Navigation
+- Line Following (OpenCV): `Line_Following/With_OpenCV/Line_Following.ipynb`
+- Line Following (Sensors): `Line_Following/With_Sensors/Line_Following.ipynb`
+- Obstacle Avoidance (Camera): `Obstacle_Avoidance/with_camera/Obstacle_Avoidance.ipynb`
+- Obstacle Avoidance (Sensors): `Obstacle_Avoidance/without_camera/Obstacle_Avoidance.ipynb`
 
-### Current Version: 2.1.0
-- ✅ **Automatic Model Downloads**: Object recognition systems now automatically download required files
-- ✅ **Enhanced Motor Calibration**: Per-motor calibration with improved accuracy
-- ✅ **Advanced Battery Monitoring**: Comprehensive logging and system service integration
-- ✅ **Improved Testing**: Enhanced self-test capabilities with camera and I2C validation
-- ✅ Raspberry Pi 5 compatibility
-- ✅ Enhanced setup automation
-- ✅ Comprehensive self-check system
-- ✅ Modern camera library support
+### Vision & Recognition
+- Object Recognition (TensorFlow): `Object-Recofnition(TF)/Object_Recognition(tensor_Flow).ipynb`
+- Object Recognition (TensorFlow Lite): `Object-Recognition(TFLite)/Object_Recognition_with_TFLite.ipynb`
+- Object Tracking (Color-Based): `Object_Tracking/Color_Based/Object_tracking.ipynb`
+- Object Tracking (KCF): `Object_Tracking/KCF_Tracler/Object_tracking.ipynb`
+- Object Tracking with Avoidance: `Object_Tracking_with_Avoidance/Object_Tracking_with Avoidance.ipynb`
+- AprilTag Recognition: `April_Tag_Recognition/April-Tag_Recognition.ipynb`
+- QR Code Recognition: `QR_Code_Recognition/QR_Recognition.ipynb`
 
-## 📖 Documentation
+### Interaction & Control
+- Mobile Controller: `Mobile_Controller/Mobile_Controller/Mobile_Controller_V2.ipynb`
+- Mobile Controller (Obstacle Alert): `Mobile_Controller/With_Obstacle_Alert/Mobile_Controller_With_Obstacle_Alert.ipynb`
+- Hand Gesture Control: `Hand-Gesture/Hand_gesture.ipynb`
 
-### 📚 Interactive Jupyter Notebooks
-Each application includes comprehensive documentation with code explanations, usage examples, and step-by-step tutorials:
+### Tools
+- HSV Color Picker: `HSV_Color_Picker/HSV_Color_Picker.ipynb`
 
-#### Core Applications
-- **🚗 [Motor & Encoder Control](./Motor_and_Encoder/Motor_and_Encoder.ipynb)** - Basic motor control and encoder usage
-- **🔋 [Battery Management System](./BMS/Battery.ipynb)** - Power monitoring and management
-- **🔋 [Battery Service Setup](./BMS/battery.service.ipynb)** - System service configuration
+### Libraries & APIs
+- Robot Hat Library Overview: `Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.ipynb`
+- Robot Hat Library API Reference: `Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib_API.ipynb`
+- Ultrasonic Sensor Library: `Libraries/Ultrasonic_Sensor/Ultrasonic_sens.ipynb`
+- IR Sensor Library: `Libraries/IR_Sensor/IRSens.ipynb`
+  
+### Update Utility
+- RepoUpdater (script/service): `RepoUpdater/updater.py` (automated pull/update if integrated as a systemd service `MCupdater.service`)
 
-#### Navigation & Autonomous Control
-- **🎯 [Line Following (OpenCV)](./Line_Following/With_OpenCV/Line_Following.ipynb)** - Vision-based line following
-- **🎯 [Line Following (Sensors)](./Line_Following/With_Sensors/Line_Following.ipynb)** - Sensor-based line following
-- **🚧 [Obstacle Avoidance (Camera)](./Obstacle_Avoidance/with_camera/Obstacle_Avoidance.ipynb)** - Vision-based navigation
-- **🚧 [Obstacle Avoidance (Sensors)](./Obstacle_Avoidance/without_camera/Obstacle_Avoidance.ipynb)** - Sensor-based navigation
+Each notebook contains runnable examples and explanations of parameters, expected inputs, and outputs.
 
-#### Computer Vision & Recognition
-- **🤖 [Object Recognition (TensorFlow)](./Object-Recofnition(TF)/Object_Recognition(tensor_Flow).ipynb)** - Full TensorFlow object detection
-- **🤖 [Object Recognition (TensorFlow Lite)](./Object-Recognition(TFLite)/Object_Recognition_with_TFLite.ipynb)** - Lightweight object detection
-- **👁️ [Object Tracking (Color-Based)](./Object_Tracking/Color_Based/Object_tracking.ipynb)** - Color-based object tracking
-- **👁️ [Object Tracking (KCF)](./Object_Tracking/KCF_Tracler/Object_tracking.ipynb)** - Advanced KCF tracking algorithm
-- **📷 [QR Code Recognition](./QR_Code_Recognition/QR_Recognition.ipynb)** - QR code detection and processing
-- **🏷️ [AprilTag Recognition](./April_Tag_Recognition/April-Tag_Recognition.ipynb)** - AprilTag detection for navigation
-- **👋 [Hand Gesture Control](./Hand-Gesture/Hand_gesture.ipynb)** - Gesture-based robot control
-- **🎨 [HSV Color Picker](./HSV_Color_Picker/HSV_Color_Picker.ipynb)** - Color calibration tool
+## Maintenance & Diagnostics
 
-#### Remote Control & Mobile Integration
-- **📱 [Mobile Controller](./Mobile_Controller/Mobile_Controller/Mobile_Controller_V2.ipynb)** - Smartphone remote control
-- **📱 [Mobile Controller with Obstacle Alert](./Mobile_Controller/With_Obstacle_Alert/Mobile_Controller_With_Obstacle_Alert.ipynb)** - Enhanced mobile control
+Utilities supporting verification, calibration, version tracking, and automated updates.
 
-#### Advanced Applications
-- **🎯 [Object Tracking with Avoidance](./Object_Tracking_with_Avoidance/Object_Tracking_with%20Avoidance.ipynb)** - Combined tracking and navigation
+### Self-Test (`self-test.py`)
+Runs a basic hardware validation (I2C bus, expected device presence, optional camera open test).
+Run:
+```bash
+python3 self-test.py
+```
 
-#### Library Documentation
-- **📚 [RPi Robot Hat Library](./Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib.ipynb)** - Main robot control library
-- **📚 [RPi Robot Hat API Reference](./Libraries/RPi_Robot_Hat_Lib/RPi_Robot_Hat_Lib_API.ipynb)** - Complete API documentation
-- **📏 [Ultrasonic Sensor Library](./Libraries/Ultrasonic_Sensor/Ultrasonic_sens.ipynb)** - Distance measurement library
-- **🔍 [IR Sensor Library](./Libraries/IR_Sensor/IRSens.ipynb)** - Infrared detection library
+### Version (`version.py` and library version)
+`version.py` holds the project version. The control library exposes its version via `RobotController().__version__()`:
+```bash
+python3 -c "from Libraries.RPi_Robot_Hat_Lib.RPi_Robot_Hat_Lib import RobotController; RobotController().__version__()"
+```
+
+### Encoder Calibration (`Encoder_Calibration.py`)
+Generates a calibration factor stored at `~/.config/mobile_robot/calibration.json` to improve distance accuracy.
+Procedure:
+```bash
+python3 Encoder_Calibration.py
+```
+Follow the prompts, measure actual travel, and re-run after mechanical changes.
+
+### RepoUpdater (`RepoUpdater/updater.py`)
+Optional pull/update helper. Manual run:
+```bash
+python3 RepoUpdater/updater.py
+```
+Optional service setup:
+```bash
+sudo cp RepoUpdater/MCupdater.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable MCupdater.service
+sudo systemctl start MCupdater.service
+```
+Check / disable:
+```bash
+systemctl status MCupdater.service
+sudo systemctl disable --now MCupdater.service
+```
+
+### Battery Management System (BMS)
+Monitors voltage and related metrics. See notebooks in `BMS/` for logic and (if present) service workflow.
+
+## Release Notes
+
+### 2.2.0 (Current)
+- Added Maintenance & Diagnostics section (self-test, calibration, updater, BMS)
+- Added structured documentation section linking all notebooks
+- Refined README to a professional format (removed excessive styling/emojis)
+- Updated repository structure section to reflect actual filesystem
+- Clarified feature scope and removed non-existent claims
+
+### 2.0.0
+- Introduced Raspberry Pi 5 compatibility adjustments
+- Improved setup automation script (`setup.sh`)
+- Added self-test script for hardware validation
+- Added encoder calibration utility (`Encoder_Calibration.py`)
+
+### 1.9.x
+- Added TensorFlow Lite object recognition examples
+- Expanded AprilTag and QR code recognition modules
+- Improved motor distance handling and encoder stability
+
+### 1.8.x
+- Added gesture control module (OpenCV-based)
+- Added color-based and KCF tracking examples
+- Introduced HSV color picker calibration tool
+
+### 1.7.x
+- Added battery management system (logging + monitoring)
+- Added mobile controller with obstacle alert variation
+- OLED display integration improvements
+
+### 1.6.x
+- Initial integration of TensorFlow object recognition
+- Line following (sensor vs OpenCV) separated into distinct modules
+
+### 1.5.x and earlier
+- Core motor control and encoder feedback
+- Base ultrasonic and IR sensor libraries
+- Initial project scaffolding and example scripts
+
+---
+If a change is missing or inaccurate, update this section alongside functional commits to keep users informed.
+
