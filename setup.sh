@@ -299,87 +299,9 @@ if command -v i2cdetect >/dev/null 2>&1; then
     sudo i2cdetect -y 1 2>/dev/null || echo "No I2C devices detected (ok if hardware not connected)"
 fi
 
-# 9) Install BMS battery service (systemd)
-echo "=============================================================="
-echo "Step 9): Install BMS battery service"
-echo "=============================================================="
-BMS_DIR="$(pwd)/BMS"
-BMS_SETUP_RESULT="skipped"
-BMS_ENABLED=""
-BMS_ACTIVE=""
-if [ -d "$BMS_DIR" ]; then
-    if [ -f "$BMS_DIR/setup.sh" ]; then
-        echo "Running BMS/setup.sh to install battery service..."
-        ( cd "$BMS_DIR" && bash ./setup.sh )
-        if [ $? -eq 0 ]; then BMS_SETUP_RESULT="ok"; else BMS_SETUP_RESULT="failed"; fi
-    elif [ -f "$BMS_DIR/setup.py" ]; then
-        echo "Running BMS/setup.py to install battery service..."
-        ( cd "$BMS_DIR" && python3 ./setup.py )
-        if [ $? -eq 0 ]; then BMS_SETUP_RESULT="ok"; else BMS_SETUP_RESULT="failed"; fi
-    else
-        echo "No setup.sh or setup.py found in BMS; skipping"
-        BMS_SETUP_RESULT="missing"
-    fi
-    # Probe service status if systemctl is available
-    if command -v systemctl >/dev/null 2>&1; then
-        BMS_SERVICE_NAME="battery.service"
-        if systemctl list-unit-files | grep -q "^${BMS_SERVICE_NAME}"; then
-            BMS_ENABLED=$(systemctl is-enabled "$BMS_SERVICE_NAME" 2>/dev/null || echo "unknown")
-            BMS_ACTIVE=$(systemctl is-active "$BMS_SERVICE_NAME" 2>/dev/null || echo "unknown")
-            echo "BMS service status: enabled=$BMS_ENABLED, active=$BMS_ACTIVE"
-        else
-            echo "BMS service unit ($BMS_SERVICE_NAME) not registered yet."
-        fi
-    fi
-else
-    echo "BMS directory not found; skipping"
-    BMS_SETUP_RESULT="missing"
-fi
-
-# 10) Install Repository Auto-Updater Service (MCupdater)
-echo "=============================================================="
-echo "Step 10): Install Repository Auto-Updater Service (MCupdater)"
-echo "=============================================================="
-
-MCUPDATER_SETUP_RESULT="unknown"
-if [ -d "RepoUpdater" ]; then
-    echo "RepoUpdater directory found, installing MCupdater service..."
-    cd RepoUpdater
-    if [ -f "setup.sh" ]; then
-        echo "Running RepoUpdater/setup.sh to install MCupdater service..."
-        # Note: RepoUpdater/setup.sh handles sudo internally for service installation
-        if ./setup.sh; then
-            MCUPDATER_SETUP_RESULT="success"
-            echo "MCupdater service installation completed successfully"
-        else
-            MCUPDATER_SETUP_RESULT="failed"
-            echo "WARNING: MCupdater service installation failed"
-        fi
-    else
-        echo "WARNING: RepoUpdater/setup.sh not found"
-        MCUPDATER_SETUP_RESULT="missing-script"
-    fi
-    cd ..
-    
-    # Check service status if systemctl is available
-    if command -v systemctl >/dev/null; then
-        MCUPDATER_SERVICE_NAME="MCupdater.service"
-        if systemctl list-unit-files | grep -q "^${MCUPDATER_SERVICE_NAME}"; then
-            MCUPDATER_ENABLED=$(systemctl is-enabled "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
-            MCUPDATER_ACTIVE=$(systemctl is-active "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
-            echo "MCupdater service status: enabled=$MCUPDATER_ENABLED, active=$MCUPDATER_ACTIVE"
-        else
-            echo "MCupdater service unit ($MCUPDATER_SERVICE_NAME) not registered yet."
-        fi
-    fi
-else
-    echo "RepoUpdater directory not found; skipping auto-updater installation"
-    MCUPDATER_SETUP_RESULT="missing-directory"
-fi
-
 # 11) FINAL GPIO library setup for Pi 5 - Done last to prevent conflicts
 echo "=============================================================="
-echo "Step 11): FINAL GPIO Library Setup for Raspberry Pi 5"
+echo "Step 9): FINAL GPIO Library Setup for Raspberry Pi 5"
 echo "=============================================================="
 
 # Step 1: Remove ALL old RPi.GPIO installations that may have been installed by dependencies
@@ -425,6 +347,85 @@ PY
 
 echo "GPIO setup completed - Pi 5 compatible libraries installed."
 check_status "Final GPIO library installation"
+
+
+# 9) Install BMS battery service (systemd)
+echo "=============================================================="
+echo "Step 10): Install BMS battery service"
+echo "=============================================================="
+BMS_DIR="$(pwd)/BMS"
+BMS_SETUP_RESULT="skipped"
+BMS_ENABLED=""
+BMS_ACTIVE=""
+if [ -d "$BMS_DIR" ]; then
+    if [ -f "$BMS_DIR/setup.sh" ]; then
+        echo "Running BMS/setup.sh to install battery service..."
+        ( cd "$BMS_DIR" && bash ./setup.sh )
+        if [ $? -eq 0 ]; then BMS_SETUP_RESULT="ok"; else BMS_SETUP_RESULT="failed"; fi
+    elif [ -f "$BMS_DIR/setup.py" ]; then
+        echo "Running BMS/setup.py to install battery service..."
+        ( cd "$BMS_DIR" && python3 ./setup.py )
+        if [ $? -eq 0 ]; then BMS_SETUP_RESULT="ok"; else BMS_SETUP_RESULT="failed"; fi
+    else
+        echo "No setup.sh or setup.py found in BMS; skipping"
+        BMS_SETUP_RESULT="missing"
+    fi
+    # Probe service status if systemctl is available
+    if command -v systemctl >/dev/null 2>&1; then
+        BMS_SERVICE_NAME="battery.service"
+        if systemctl list-unit-files | grep -q "^${BMS_SERVICE_NAME}"; then
+            BMS_ENABLED=$(systemctl is-enabled "$BMS_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            BMS_ACTIVE=$(systemctl is-active "$BMS_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            echo "BMS service status: enabled=$BMS_ENABLED, active=$BMS_ACTIVE"
+        else
+            echo "BMS service unit ($BMS_SERVICE_NAME) not registered yet."
+        fi
+    fi
+else
+    echo "BMS directory not found; skipping"
+    BMS_SETUP_RESULT="missing"
+fi
+
+# 10) Install Repository Auto-Updater Service (MCupdater)
+echo "=============================================================="
+echo "Step 11): Install Repository Auto-Updater Service (MCupdater)"
+echo "=============================================================="
+
+MCUPDATER_SETUP_RESULT="unknown"
+if [ -d "RepoUpdater" ]; then
+    echo "RepoUpdater directory found, installing MCupdater service..."
+    cd RepoUpdater
+    if [ -f "setup.sh" ]; then
+        echo "Running RepoUpdater/setup.sh to install MCupdater service..."
+        # Note: RepoUpdater/setup.sh handles sudo internally for service installation
+        if ./setup.sh; then
+            MCUPDATER_SETUP_RESULT="success"
+            echo "MCupdater service installation completed successfully"
+        else
+            MCUPDATER_SETUP_RESULT="failed"
+            echo "WARNING: MCupdater service installation failed"
+        fi
+    else
+        echo "WARNING: RepoUpdater/setup.sh not found"
+        MCUPDATER_SETUP_RESULT="missing-script"
+    fi
+    cd ..
+    
+    # Check service status if systemctl is available
+    if command -v systemctl >/dev/null; then
+        MCUPDATER_SERVICE_NAME="MCupdater.service"
+        if systemctl list-unit-files | grep -q "^${MCUPDATER_SERVICE_NAME}"; then
+            MCUPDATER_ENABLED=$(systemctl is-enabled "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            MCUPDATER_ACTIVE=$(systemctl is-active "$MCUPDATER_SERVICE_NAME" 2>/dev/null || echo "unknown")
+            echo "MCupdater service status: enabled=$MCUPDATER_ENABLED, active=$MCUPDATER_ACTIVE"
+        else
+            echo "MCupdater service unit ($MCUPDATER_SERVICE_NAME) not registered yet."
+        fi
+    fi
+else
+    echo "RepoUpdater directory not found; skipping auto-updater installation"
+    MCUPDATER_SETUP_RESULT="missing-directory"
+fi
 
 echo "=============================================================="
 echo "Setup completed"
