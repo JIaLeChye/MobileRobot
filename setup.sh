@@ -85,7 +85,8 @@ echo "=============================================================="
 echo "Step 1): Update system packages"
 echo "=============================================================="
 echo "Updating system packages..."
-sudo apt update && sudo apt upgrade -y
+export DEBIAN_FRONTEND=noninteractive
+sudo -E apt update && sudo -E apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 check_status "System update"
 
 echo "=============================================================="
@@ -100,7 +101,7 @@ for package in python3-pip i2c-tools python3-picamera2 python3-libcamera cmake b
 done
 if [ -n "$missing_packages" ]; then
     echo "Installing:$missing_packages"
-    sudo apt install -y $missing_packages
+    sudo -E apt install -y $missing_packages -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 else
     echo "All system dependencies already installed"
 fi
@@ -397,7 +398,7 @@ rm -rf ~/.local/lib/python3.11/site-packages/RPi.GPIO* 2>/dev/null || true
 
 # Step 3: Install rpi-lgpio via apt (provides RPi.GPIO compatibility for Pi 5)
 echo "Installing rpi-lgpio via apt..."
-sudo apt install --reinstall -y python3-rpi-lgpio
+sudo -E apt install --reinstall -y python3-rpi-lgpio -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 
 # Step 4: Verify the installation works
 echo "Verifying GPIO library installation..."
