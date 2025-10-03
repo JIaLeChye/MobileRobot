@@ -218,32 +218,33 @@ def test_distance_movement(robot, oled_objects):
     
 def test_square(robot):
     print("\nDriving in square pattern...")
+    speed = 50 
     for _ in range(2):
         print("Square loop iteration: ", _+1)
         # Move forward
         print("Moving forward...")
-        robot.Forward(30)
-        time.sleep(2)
+        robot.Forward(speed)
+        time.sleep(1)
         robot.stop()
         time.sleep(0.5)
         # Turn Right
         print("Shifting right...")
-        robot.Horizontal_Right(30)  # Adjusted for right turn
+        robot.Horizontal_Right(speed)  # Adjusted for right turn
         time.sleep(1)
         robot.stop()
         time.sleep(0.5)
         # Move Backward
         print("Moving backward...")
-        robot.Backward(30)
-        time.sleep(2)
+        robot.Backward(speed)
+        time.sleep(1)
         robot.stop()
         time.sleep(0.5)
         # Turn left
         print("Shifting left...")
-        robot.Horizontal_Left(30)  # Adjusted for left turn
+        robot.Horizontal_Left(speed)  # Adjusted for left turn
         time.sleep(1)
         robot.stop()
-        time.sleep(0.5)
+        time.sleep(2)
 
 
 def test_circle(robot):
