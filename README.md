@@ -1,6 +1,6 @@
 # MobileRobot
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](./version.py)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](./version.py)
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204%2F5-red.svg)](https://raspberrypi.org)
 
