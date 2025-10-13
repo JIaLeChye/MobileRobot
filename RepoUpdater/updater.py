@@ -35,6 +35,21 @@ ACCESS_ERROR_KEYWORDS = [
     "Authentication failed"
 ]
 
+# Git corruption detection keywords
+CORRUPTION_KEYWORDS = [
+    "object file .git/objects",
+    "is empty",
+    "is corrupt",
+    "loose object",
+    "stored in .git/objects",
+    "fatal: loose object",
+    "error: object file",
+    "bad object",
+    "corrupt object",
+    "fatal: bad object",
+    "git fsck"
+]
+
 REPO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 HOME_DIR = os.path.expanduser('~')
 DEBUG_DIR = os.path.join(HOME_DIR, 'Debug_log')
@@ -98,6 +113,146 @@ def test_network_connectivity():
     
     # All tests failed - no network connectivity
     return False
+
+def is_git_corruption_error(combined_output):
+    """Check if the git output indicates repository corruption."""
+    if not combined_output:
+        return False
+    
+    output_lower = combined_output.lower()
+    
+    # Check for corruption-specific keywords
+    has_corruption = any(keyword.lower() in output_lower for keyword in CORRUPTION_KEYWORDS)
+    
+    return has_corruption
+
+def repair_git_repository():
+    """Attempt to repair Git repository corruption.
+    
+    Returns:
+        bool: True if repair was successful, False otherwise
+    """
+    try:
+        logging.info("Attempting to repair Git repository corruption...")
+        
+        # Step 1: Try git fsck to identify and repair issues
+        logging.info("Running git fsck --full")
+        fsck_result = subprocess.run(
+            ["git", "fsck", "--full"], 
+            cwd=REPO_PATH, 
+            capture_output=True, 
+            text=True, 
+            timeout=120
+        )
+        
+        if fsck_result.returncode == 0:
+            logging.info("Git fsck completed successfully - no corruption detected")
+        else:
+            logging.warning(f"Git fsck found issues: {fsck_result.stderr}")
+        
+        # Step 2: Try to remove corrupted objects and re-fetch
+        logging.info("Attempting to clean up corrupted objects...")
+        
+        # Find and remove empty/corrupted object files
+        objects_dir = os.path.join(REPO_PATH, '.git', 'objects')
+        if os.path.exists(objects_dir):
+            # Remove empty object files
+            for root, dirs, files in os.walk(objects_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    try:
+                        if os.path.getsize(file_path) == 0:
+                            logging.info(f"Removing empty object file: {file_path}")
+                            os.remove(file_path)
+                    except OSError:
+                        continue
+        
+        # Step 3: Try git gc with aggressive cleanup
+        logging.info("Running git gc --aggressive --prune=now")
+        gc_result = subprocess.run(
+            ["git", "gc", "--aggressive", "--prune=now"], 
+            cwd=REPO_PATH, 
+            capture_output=True, 
+            text=True, 
+            timeout=300
+        )
+        
+        if gc_result.returncode != 0:
+            logging.warning(f"Git gc had issues: {gc_result.stderr}")
+        
+        # Step 4: Re-fetch all objects from remote
+        logging.info("Re-fetching all objects from remote...")
+        fetch_result = subprocess.run(
+            ["git", "fetch", "--all", "--prune"], 
+            cwd=REPO_PATH, 
+            capture_output=True, 
+            text=True, 
+            timeout=120
+        )
+        
+        if fetch_result.returncode != 0:
+            logging.error(f"Failed to fetch after repair: {fetch_result.stderr}")
+            
+            # Step 5: Last resort - reset to remote HEAD
+            logging.info("Attempting hard reset to remote HEAD...")
+            try:
+                # Get the default branch
+                branch_result = subprocess.run(
+                    ["git", "symbolic-ref", "refs/remotes/origin/HEAD"], 
+                    cwd=REPO_PATH, 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                
+                if branch_result.returncode == 0:
+                    remote_head = branch_result.stdout.strip().replace('refs/remotes/origin/', '')
+                else:
+                    remote_head = "main"  # fallback to main
+                
+                # Reset to remote branch
+                reset_result = subprocess.run(
+                    ["git", "reset", "--hard", f"origin/{remote_head}"], 
+                    cwd=REPO_PATH, 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=30
+                )
+                
+                if reset_result.returncode == 0:
+                    logging.info("Successfully reset to remote HEAD")
+                    return True
+                else:
+                    logging.error(f"Hard reset failed: {reset_result.stderr}")
+                    
+            except Exception as e:
+                logging.error(f"Hard reset attempt failed: {e}")
+        else:
+            logging.info("Successfully re-fetched objects from remote")
+        
+        # Step 6: Final verification with fsck
+        logging.info("Running final git fsck verification...")
+        final_fsck = subprocess.run(
+            ["git", "fsck"], 
+            cwd=REPO_PATH, 
+            capture_output=True, 
+            text=True, 
+            timeout=60
+        )
+        
+        if final_fsck.returncode == 0:
+            logging.info("Git repository repair completed successfully")
+            return True
+        else:
+            logging.error(f"Repository still has issues after repair: {final_fsck.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        logging.error("Git repository repair timed out")
+        return False
+    except Exception as e:
+        logging.error(f"Error during Git repository repair: {e}", exc_info=True)
+        return False
 
 def is_network_error(combined_output):
     """Check if the git output indicates a network connectivity issue (not auth/access)."""
@@ -413,13 +568,39 @@ def update_repo(gui: UpdaterGUI):
             if fetch_result.stderr:
                 logging.warning(f"git fetch stderr: {fetch_result.stderr.strip()}")
                 
-            # Check for network errors during fetch
+            # Check for network errors during fetch first
             combined_fetch = (fetch_result.stdout or '') + "\n" + (fetch_result.stderr or '')
             if is_network_error(combined_fetch):
                 gui.set_status("Network connectivity issue detected during fetch.", progress=50)
                 gui.show_network_error("Network connectivity issue detected during fetch.\nPlease check your internet connection and try again.")
                 logging.error("Network connectivity issue detected during fetch.")
                 return
+            
+            # Check for Git corruption errors during fetch
+            elif is_git_corruption_error(combined_fetch):
+                gui.set_status("Git corruption detected during fetch. Attempting repair...", progress=40)
+                logging.warning("Git corruption detected during fetch. Attempting repair...")
+                
+                if repair_git_repository():
+                    gui.set_status("Git corruption repaired. Retrying fetch...", progress=50)
+                    logging.info("Git corruption repaired successfully. Retrying fetch...")
+                    
+                    # Retry the fetch after repair
+                    try:
+                        retry_fetch = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True, timeout=60)
+                        if retry_fetch.returncode != 0:
+                            logging.error(f"Fetch still failed after repair: {retry_fetch.stderr}")
+                            gui.set_status("❌ Fetch failed even after corruption repair", progress=100)
+                            return
+                    except subprocess.TimeoutExpired:
+                        gui.set_status("Timeout during fetch retry after repair.", progress=100)
+                        logging.error("Timeout during fetch retry after corruption repair.")
+                        return
+                else:
+                    gui.set_status("❌ Failed to repair Git corruption", progress=100)
+                    gui.show_conflicts(message="Git repository corruption detected but repair failed. Manual intervention may be required. Check logs for details.")
+                    logging.error("Failed to repair Git corruption during fetch.")
+                    return
                 
         except subprocess.TimeoutExpired:
             gui.set_status("Network timeout during fetch.", progress=50)
@@ -437,13 +618,43 @@ def update_repo(gui: UpdaterGUI):
             if pull_result.stderr:
                 logging.warning(f"git pull stderr: {pull_result.stderr.strip()}")
                 
-            # Check for network errors during pull
+            # Check for network errors during pull first
             combined_pull = (pull_result.stdout or '') + "\n" + (pull_result.stderr or '')
             if is_network_error(combined_pull):
                 gui.set_status("Network connectivity issue detected during pull.", progress=75)
                 gui.show_network_error("Network connectivity issue detected during pull.\nPlease check your internet connection and try again.")
                 logging.error("Network connectivity issue detected during pull.")
                 return
+            
+            # Check for Git corruption errors after network check
+            elif is_git_corruption_error(combined_pull):
+                gui.set_status("Git corruption detected. Attempting repair...", progress=80)
+                logging.warning("Git corruption detected during pull. Attempting repair...")
+                
+                if repair_git_repository():
+                    gui.set_status("Git corruption repaired. Retrying update...", progress=85)
+                    logging.info("Git corruption repaired successfully. Retrying pull...")
+                    
+                    # Retry the pull after repair
+                    try:
+                        retry_pull = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True, timeout=120)
+                        if retry_pull.returncode == 0:
+                            logging.info("Pull successful after corruption repair")
+                            pull_result = retry_pull  # Use the successful result
+                        else:
+                            logging.error(f"Pull still failed after repair: {retry_pull.stderr}")
+                            gui.set_status("❌ Pull failed even after corruption repair", progress=100)
+                            gui.show_conflicts(message="Git corruption was repaired but pull still failed. Check logs for details.")
+                            return
+                    except subprocess.TimeoutExpired:
+                        gui.set_status("Timeout during retry after repair.", progress=100)
+                        logging.error("Timeout during retry after corruption repair.")
+                        return
+                else:
+                    gui.set_status("❌ Failed to repair Git corruption", progress=100)
+                    gui.show_conflicts(message="Git repository corruption detected but repair failed. Manual intervention may be required. Check logs for details.")
+                    logging.error("Failed to repair Git corruption.")
+                    return
                 
         except subprocess.TimeoutExpired:
             gui.set_status("Network timeout during pull.", progress=75)
@@ -548,6 +759,7 @@ def headless_update():
                 fetch_result = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True, timeout=30)
                 combined_fetch = (fetch_result.stdout or '') + "\n" + (fetch_result.stderr or '')
                 
+                # Check for network errors first
                 if is_network_error(combined_fetch):
                     if fetch_attempts >= max_fetch_retries:
                         print("❌ Network error - update failed")
@@ -565,6 +777,34 @@ def headless_update():
                     import time
                     time.sleep(2)  # Brief delay before retry
                     continue
+                
+                # Check for Git corruption after network check
+                elif is_git_corruption_error(combined_fetch):
+                    print("⚠️  Git corruption detected during fetch - attempting repair...")
+                    logging.warning("Git corruption detected during fetch. Attempting repair...")
+                    
+                    if repair_git_repository():
+                        print("✅ Git corruption repaired - retrying fetch...")
+                        logging.info("Git corruption repaired successfully. Retrying fetch...")
+                        
+                        # Retry the fetch after repair
+                        try:
+                            retry_fetch = subprocess.run(["git", "fetch"], cwd=REPO_PATH, capture_output=True, text=True, timeout=30)
+                            if retry_fetch.returncode == 0:
+                                logging.info("Fetch successful after corruption repair")
+                                break  # Fetch successful after repair
+                            else:
+                                logging.error(f"Fetch still failed after repair: {retry_fetch.stderr}")
+                                print("❌ Fetch failed even after corruption repair")
+                                return
+                        except subprocess.TimeoutExpired:
+                            print("❌ Timeout during fetch retry after repair")
+                            logging.error("Timeout during fetch retry after corruption repair.")
+                            return
+                    else:
+                        print("❌ Failed to repair Git corruption")
+                        logging.error("Failed to repair Git corruption during fetch.")
+                        return
                 else:
                     break  # Fetch successful
                     
@@ -615,7 +855,36 @@ def headless_update():
                     time.sleep(3)  # Longer delay for pull retries
                     continue
                 
-                # SECOND: Check if git command failed but it's not a network issue
+                # SECOND: Check for Git corruption errors
+                elif is_git_corruption_error(combined):
+                    print("⚠️  Git corruption detected - attempting repair...")
+                    logging.warning("Git corruption detected during pull. Attempting repair...")
+                    
+                    if repair_git_repository():
+                        print("✅ Git corruption repaired - retrying update...")
+                        logging.info("Git corruption repaired successfully. Retrying pull...")
+                        
+                        # Retry the pull after repair
+                        try:
+                            retry_result = subprocess.run(["git", "pull"], cwd=REPO_PATH, capture_output=True, text=True, timeout=60)
+                            if retry_result.returncode == 0:
+                                logging.info("Pull successful after corruption repair")
+                                result = retry_result  # Use the successful result
+                                # Continue with success handling below
+                            else:
+                                logging.error(f"Pull still failed after repair: {retry_result.stderr}")
+                                print("❌ Pull failed even after corruption repair")
+                                return
+                        except subprocess.TimeoutExpired:
+                            print("❌ Timeout during retry after repair")
+                            logging.error("Timeout during retry after corruption repair.")
+                            return
+                    else:
+                        print("❌ Failed to repair Git corruption")
+                        logging.error("Failed to repair Git corruption.")
+                        return
+                
+                # THIRD: Check if git command failed but it's not a network issue
                 if result.returncode != 0:
                     # Additional network check for generic failures
                     if not test_network_connectivity():
