@@ -1,221 +1,206 @@
 
-## Object detection and image processing 
-import tensorflow as tf 
-from object_detection.utils import label_map_util
-from object_detection.utils import visualization_utils as viz_utils 
-import object_detection as od_pkg
+## Object detection using full TensorFlow 2.x (SavedModel API)
+## Contrast: The TFLite edition uses tflite_runtime.interpreter (lightweight, quantized)
+##           This edition uses tf.saved_model.load() (full TF2, float32, higher accuracy)
+import tensorflow as tf
+import tensorflow_hub as hub
 
 ## Required files validation
 import os
-import tarfile
 import urllib.request
 
-## To get the accurate time 
+## To get the accurate time
 import time
 
-## Image aquation and atftyer processing process 
+## Image acquisition and after processing
 import cv2
 import numpy as np
-from picamera2 import Picamera2 
-from libcamera import controls, Transform 
+from picamera2 import Picamera2
+from libcamera import controls, Transform
 
 
+## ─── Global settings ────────────────────────────────────────────────────────
+frame_height = 480
+frame_width  = 640
 
-## define global variables 
-frame_height = 480 
-frame_width = 640
+SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR    = os.path.join(SCRIPT_DIR, 'tf_saved_model')
 
-## Load the Model Folder 
-model_folder = 'object_detection'
-model_Name = '/ssdlite_mobilenet_v2_coco_2018_05_09'
-path_To_ckpt = model_folder + model_Name + '/frozen_inference_graph.pb'
+## SSD MobileNet V2 320x320 — full TF2 SavedModel from TensorFlow Hub
+## (same architecture as the TFLite edition, but full float32 precision)
+TFHUB_MODEL_URL = 'https://tfhub.dev/tensorflow/ssd_mobilenet_v2/2'
 
-# Prefer the label map bundled with the installed object_detection package
-try:
-    _pkg_dir = os.path.dirname(od_pkg.__file__)
-    path_to_labels = os.path.join(_pkg_dir, 'data', 'mscoco_label_map.pbtxt')
-except Exception:
-    # Fallback to local relative path if package resource lookup fails
-    path_to_labels = os.path.join(model_folder, 'data', 'mscoco_label_map.pbtxt')
+## COCO label map (90 classes, index 1-based to match model output)
+LABELS_URL  = 'https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/data/mscoco_label_map.pbtxt'
+LABELS_PATH = os.path.join(MODEL_DIR, 'mscoco_label_map.pbtxt')
 
-number_Class = 90
+SCORE_THRESHOLD = 0.5    # Only show detections above this confidence
+TARGET_OBJECT   = 'bottle'  # The object to trigger robot action
 
-MODEL_BASE_URL = 'http://download.tensorflow.org/models/object_detection/'
-MODEL_ARCHIVE = 'ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz'
-LABEL_MAP_URL = 'https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/data/mscoco_label_map.pbtxt'
 
-def ensure_label_map_present():
-    """Ensure the COCO label map exists locally; download if missing."""
-    nonlocal_path = path_to_labels
-    # If the package path doesn't exist, write to local object_detection/data
-    if not os.path.isfile(nonlocal_path):
-        local_labels_dir = os.path.join(model_folder, 'data')
-        os.makedirs(local_labels_dir, exist_ok=True)
-        local_labels_path = os.path.join(local_labels_dir, 'mscoco_label_map.pbtxt')
-        try:
-            print('Label map not found. Downloading COCO label map...')
-            urllib.request.urlretrieve(LABEL_MAP_URL, local_labels_path)
-            print('Label map saved to:', local_labels_path)
-            return local_labels_path
-        except Exception as e:
-            print('Failed to download label map:', e)
-            return nonlocal_path
-    return nonlocal_path
+## ─── Label loading ───────────────────────────────────────────────────────────
 
-def ensure_model_present():
-    """Download and extract the TF1 SSDLite MobileNet v2 model if missing."""
-    os.makedirs(model_folder, exist_ok=True)
-    if os.path.isfile(path_To_ckpt):
-        return True
-    archive_path = os.path.join(model_folder, MODEL_ARCHIVE)
-    try:
-        print('Model not found locally. Downloading:', MODEL_ARCHIVE)
-        urllib.request.urlretrieve(MODEL_BASE_URL + MODEL_ARCHIVE, archive_path)
-        print('Download complete. Extracting...')
-        with tarfile.open(archive_path, 'r:gz') as tar:
-            tar.extractall(model_folder)
-        try:
-            os.remove(archive_path)
-        except OSError:
-            pass
-        return os.path.isfile(path_To_ckpt)
-    except Exception as e:
-        print('Failed to download model:', e)
-        return False
+def ensure_labels_present():
+    """Download the COCO label map pbtxt if not already on disk."""
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    if os.path.isfile(LABELS_PATH):
+        return
+    print('Downloading COCO label map...')
+    urllib.request.urlretrieve(LABELS_URL, LABELS_PATH)
+    print('Labels saved to:', LABELS_PATH)
 
-## Check location of the files
-isCKPTexist = os.path.isfile(path_To_ckpt)
-isLabelexist = os.path.isfile(path_to_labels)
-if isCKPTexist: 
-    print('Model Found at:', path_To_ckpt)
-else:
-    print('Model Not Found')
-    # Try to fetch the model automatically
-    if ensure_model_present():
-        isCKPTexist = True
-        print('Model downloaded to:', path_To_ckpt)
-if isLabelexist:
-    print('Label File Found at:', path_to_labels)
-else:
-    print('Label File Not Found')
-    # Try to fetch the label map automatically
-    new_path = ensure_label_map_present()
-    path_to_labels = new_path
-    isLabelexist = os.path.isfile(path_to_labels)
-    if isLabelexist:
-        print('Label File Downloaded to:', path_to_labels)
-    else:
-        # If the package resource wasn't found, give a hint
-        if 'site-packages' not in path_to_labels:
-            print('Tip: Install tensorflow-object-detection-api or place mscoco_label_map.pbtxt under object_detection/data/')
 
-# Final guard before proceeding
-if not isCKPTexist:
-    raise FileNotFoundError(f"Missing model file: {path_To_ckpt}. Check your network and rerun, or provide the model locally.")
-if not isLabelexist:
-    raise FileNotFoundError(f"Missing label map: {path_to_labels}. Ensure TensorFlow Object Detection API is installed or provide the file locally.")
+def load_labels_from_pbtxt(path):
+    """Parse a .pbtxt label map and return a dict {id: display_name}."""
+    labels = {}
+    current_id = None
+    with open(path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith('id:'):
+                current_id = int(line.split(':')[1].strip())
+            elif line.startswith('display_name:') and current_id is not None:
+                name = line.split(':', 1)[1].strip().strip('"')
+                labels[current_id] = name
+    return labels
 
-## load the Tensorflow Detection Graph
-print("Loading tensorflow Graph....")
-detection_graph = tf.Graph()
-with detection_graph.as_default():
-    od_graph_def = tf.compat.v1.GraphDef()
-    with tf.io.gfile.GFile(path_To_ckpt, 'rb') as fid:
-        serialized_graph = fid.read()
-        od_graph_def.ParseFromString(serialized_graph)
-        tf.import_graph_def(od_graph_def, name='')
 
-label_map = label_map_util.load_labelmap(path_to_labels)
-categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=number_Class, use_display_name=True)
-category_index = label_map_util.create_category_index(categories)
-print("Graph Loading Process Complete!")
+## ─── Model loading ───────────────────────────────────────────────────────────
 
-## Initialize Picamera2 Library 
+def load_model():
+    """Load SSD MobileNet V2 SavedModel from TF Hub (cached locally after first run)."""
+    # TF Hub caches the model in TFHUB_CACHE_DIR (default: /tmp/tfhub_modules)
+    # Set cache dir next to the script for persistence across reboots
+    os.environ.setdefault('TFHUB_CACHE_DIR', MODEL_DIR)
+    print('Loading TF2 SavedModel from TF Hub (first run downloads ~67 MB)...')
+    model = hub.load(TFHUB_MODEL_URL)
+    print('Model loaded.')
+    return model
+
+
+## ─── Drawing helper ──────────────────────────────────────────────────────────
+
+def draw_detection(frame, box, label, score, color=(0, 255, 0)):
+    """Draw a bounding box and label on the BGR frame."""
+    h, w = frame.shape[:2]
+    ymin, xmin, ymax, xmax = box
+    left   = int(xmin * w)
+    right  = int(xmax * w)
+    top    = int(ymin * h)
+    bottom = int(ymax * h)
+
+    cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+    text = f'{label}: {score:.0%}'
+    text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+    cv2.rectangle(frame, (left, top - text_size[1] - 4), (left + text_size[0], top), color, -1)
+    cv2.putText(frame, text, (left, top - 2),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
+    return left, right, top, bottom
+
+
+## ─── Initialization ──────────────────────────────────────────────────────────
+
+ensure_labels_present()
+labels = load_labels_from_pbtxt(LABELS_PATH)
+
+## Load the full TF2 SavedModel (infer function accepts uint8 image tensors)
+detector = load_model()
+detect_fn = detector.signatures['serving_default']
+
+## ─── Camera setup ────────────────────────────────────────────────────────────
 
 cam = Picamera2()
-
-cam.configure(cam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1)))
+cam.configure(cam.create_preview_configuration(
+    main={"format": 'RGB888', "size": (frame_width, frame_height)},
+    transform=Transform(vflip=1)
+))
 cam.start()
-cam.set_controls({"AfMode":controls.AfModeEnum.Continuous}) # Enable auto focus 
- 
-## Object detection Function
-def object_detect(): 
-    
-     with detection_graph.as_default():
-        with tf.compat.v1.Session(graph=detection_graph) as sess:
-            while True:
-                ## Start the capturing the frame 
-                frame = cam.capture_array()
-                bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                ## tidy up the captured frame array 
-                image_np_expanded = np.expand_dims(bgr, axis=0)
-                ## start detection 
-                image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-                boxes_tensor = detection_graph.get_tensor_by_name('detection_boxes:0')
-                scores_tensor = detection_graph.get_tensor_by_name('detection_scores:0')
-                classes_tensor = detection_graph.get_tensor_by_name('detection_classes:0')
-                num_detections_tensor = detection_graph.get_tensor_by_name('num_detections:0')
-
-                (boxes, scores, classes, num_detections) = sess.run(
-                                                                    [boxes_tensor, scores_tensor, classes_tensor, num_detections_tensor],
-                                                                    feed_dict={image_tensor: image_np_expanded})
-                
-                ## When Object detected
-                for i in range(0,10):
-                    if scores[0][i] > 0.5:
-                        
-                        print("Object:", category_index[classes[0][i]]['name'])
-                        print("Score:", scores[0][i])
-                        
-                        ## Draw boxes for the detected object
-                        viz_utils.visualize_boxes_and_labels_on_image_array(
-                                bgr,
-                                np.squeeze(boxes),
-                                np.squeeze(classes).astype(np.int32),
-                                np.squeeze(scores),
-                                category_index,
-                                use_normalized_coordinates=True,
-                                line_thickness=2)
-                        ## get the coordinates of the detected object
-                        box = boxes[0][i]
-                        ymin, xmin, ymax, xmax = box
-                        im_height, im_width, _ = frame.shape 
-                        left = int(xmin * im_width)
-                        right = int(xmax * im_width)
-                        top = int(ymin * im_height)
-                        bottom = int(ymax * im_height)
-                        center_y = int((left + right) // 2)
-                        center_x = int((top + bottom) // 2)
-                        print("Coordinates: ", "\nX: ", center_x, "\nY: ", center_y)
-                  
-
-                        ## When the specific object is selected  
-                        if category_index[classes[0][i]]['name'] == 'bottle':
-                            coordinates = [center_y, center_x] 
-
-                            # movement(coordinates)
-                            object_detected = True
-                        else:
-                            object_detected = False
+cam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
 
-                    frame = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-                    cv2.imshow("main", frame)
+## ─── Main detection loop ─────────────────────────────────────────────────────
 
-                    if cv2.waitKey(1) == ord('q'):
-                        break
+def object_detect():
+    print('Starting object detection (TF2 SavedModel). Press q to quit.')
+    fps_counter = 0
+    t_start = time.time()
+
+    while True:
+        ## Capture frame from camera
+        # picamera2 RGB888 stores pixels in BGR order in memory — same as OpenCV
+        frame = cam.capture_array()              # BGR (ready for OpenCV display)
+
+        ## TF2 SavedModel expects uint8 RGB tensor [1, H, W, 3]
+        # Convert BGR → RGB only for the inference input
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        input_tensor = tf.convert_to_tensor(rgb)             # uint8 RGB
+        input_tensor = input_tensor[tf.newaxis, ...]         # add batch dim
+
+        ## Run inference
+        detections = detect_fn(input_tensor)
+
+        ## Extract results (remove batch dimension)
+        boxes   = detections['detection_boxes'][0].numpy()   # [N, 4]  ymin,xmin,ymax,xmax
+        classes = detections['detection_classes'][0].numpy().astype(int)  # [N]
+        scores  = detections['detection_scores'][0].numpy()  # [N]
+
+        ## Process detections
+        for i in range(len(scores)):
+            if scores[i] < SCORE_THRESHOLD:
+                continue
+
+            class_id = classes[i]
+            label = labels.get(class_id, f'id:{class_id}')
+            score = scores[i]
+
+            print(f'Object: {label}  Score: {score:.2f}')
+
+            ## Draw bounding box on BGR frame (frame is already BGR)
+            left, right, top, bottom = draw_detection(frame, boxes[i], label, score)
+
+            ## Compute object centre
+            center_x = (left + right) // 2
+            center_y = (top + bottom) // 2
+            print(f'Coordinates:  X={center_x}  Y={center_y}')
+
+            ## Target-specific action
+            if label == TARGET_OBJECT:
+                coordinates = [center_x, center_y]
+                object_detected = True
+                # motor_command(coordinates)   # ← hook in robot movement here
+            else:
+                object_detected = False
+
+        ## Compute and display FPS
+        fps_counter += 1
+        elapsed = time.time() - t_start
+        fps = fps_counter / elapsed if elapsed > 0 else 0
+        cv2.putText(frame, f'FPS: {fps:.1f}', (10, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        ## Show annotated frame (frame is BGR — correct for cv2.imshow)
+        cv2.imshow('Object Detection (TF2 SavedModel)', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 
+## ─── Cleanup & entry point ───────────────────────────────────────────────────
+
+def cleanup():
+    """Release all resources cleanly."""
+    try:
+        cam.stop()
+        cam.close()
+    except Exception:
+        pass
+    cv2.destroyAllWindows()
 
 
-try:
-    if __name__ == '__main__':
+if __name__ == '__main__':
+    try:
         object_detect()
-
-except KeyboardInterrupt:
-    pass
- 
-finally:
-    cam.close() 
-    exit()
-
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cleanup()

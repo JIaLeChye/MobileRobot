@@ -86,6 +86,7 @@ class RobotController:
 
         self.previous_counts = {'RF': 0, 'RB': 0, 'LF': 0, 'LB': 0}
         self.first_read = {'RF': True, 'RB': True, 'LF': True, 'LB': True}
+        
 
 
     def __version__(self):

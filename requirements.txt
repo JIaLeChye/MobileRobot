@@ -8,26 +8,27 @@
 
 # Core libraries for Mobile Robot
 adafruit-circuitpython-ssd1306  # OLED display
-smbus2                       # I2C communication
-numpy==1.26.4                # Numerical computing (compatible with TF 2.17/MediaPipe 0.10.x)
-packaging                    # Version comparison utilities
-opencv-contrib-python==4.11.0.86  # Computer vision (compatible with numpy 1.26.4)
-Pillow                       # Image processing
-picamera2                    # Raspberry Pi camera (if not system-installed)
-Adafruit_Blinka==8.54.0      # conflicts with rpi-lgpio on Pi 5
+smbus2                          # I2C communication
+numpy                           # Numerical computing
+packaging                       # Version comparison utilities
+opencv-contrib-python==4.11.0.86  # Computer vision
+Pillow                          # Image processing
+picamera2                       # Raspberry Pi camera (if not system-installed)
+# Adafruit_Blinka removed: conflicts with rpi-lgpio on Pi 5
 smbus==1.1.post2
 
-# TensorFlow Lite and Machine Learning
-tflite-runtime              # TensorFlow Lite runtime for object detection
-mediapipe==0.10.5            # Google's ML framework for hand gesture recognition
-tensorflow==2.17.0          # Downgraded to ensure compatibility with ml-dtypes==0.5.3
-tensorflow-object-detection-api  # TensorFlow Object Detection API
+# TensorFlow and Machine Learning
+# tflite-runtime is bundled inside tensorflow 2.x (use tf.lite.Interpreter directly)
+# tensorflow-object-detection-api # Replaced by tensorflow-hub
+tensorflow>=2.20.0              # Latest available on piwheels for Pi 5; includes TFLite runtime
+ai-edge-litert                  # LiteRT interpreter — replaces deprecated tf.lite.Interpreter (TF 2.20+)
+mediapipe>=1.0.0                # Google ML framework (Tasks API; 0.10.x unavailable on ARM)
+tensorflow-hub                  # Required by Object-Recognition(TF) edition (SavedModel loading)
 
-# Computer Vision and Recogni
-apriltag                    # April Tag detection and recognition
+# Computer Vision and Recognition
+apriltag                        # April Tag detection and recognition
 
 # IoT and Remote Control (from GitHub)
-git+https://github.com/vshymanskyy/blynk-library-python.git  # Mobile app remote control integration
+git+https://github.com/vshymanskyy/blynk-library-python.git  # Mobile app remote control
 
-protobuf==3.20.3  # Compatible with TF Object Detection API and MediaPipe 0.10.5
-
+protobuf>=3.20.3,<5             # Compatible with TF 2.20+ and MediaPipe 1.x

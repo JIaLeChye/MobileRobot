@@ -171,7 +171,7 @@ fail_pkgs=()
 if [ -f "requirements.txt" ]; then
     while IFS= read -r pkg || [ -n "$pkg" ]; do
         # Skip empty lines and full-line comments
-        if [ -z "$pkg" ] || echo "$pkg" | grep -Eq '^\s*#'; then
+        if [ -z "$pkg" ] || echo "$pkg" | grep -Eq '^[[:space:]]*#'; then
             continue
         fi
         # Remove inline comments and trim whitespace/CRLF
@@ -226,7 +226,7 @@ PY
             echo "     (already installed: $pkg_base) - skipping"
             continue
         fi
-        if sudo pip3 install "$clean_pkg" --break-system-packages; then
+        if sudo pip3 install "$clean_pkg" --break-system-packages --ignore-installed; then
             success_pkgs+=("$clean_pkg")
         else
             fail_pkgs+=("$clean_pkg")

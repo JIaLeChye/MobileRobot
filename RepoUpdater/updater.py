@@ -7,6 +7,7 @@ import logging
 import webbrowser
 import argparse
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 import tkinter.messagebox
 
@@ -91,8 +92,17 @@ def print_recent_logs(lines=10):
     except Exception:
         pass  # Silently handle any file read issues
 
+_network_cache_time = 0
+_network_cache_result = False
+
 def test_network_connectivity():
     """Test basic network connectivity to github.com and general internet"""
+    global _network_cache_time, _network_cache_result
+    
+    # Cache result for 10 seconds to speed up UI
+    if time.time() - _network_cache_time < 10:
+        return _network_cache_result
+
     # Quick tests with short timeouts to avoid hanging
     tests = [
         # Test DNS resolution first (fastest)
@@ -107,11 +117,15 @@ def test_network_connectivity():
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             if result.returncode == 0:
+                _network_cache_time = time.time()
+                _network_cache_result = True
                 return True
         except (subprocess.TimeoutExpired, FileNotFoundError):
             continue
     
     # All tests failed - no network connectivity
+    _network_cache_time = time.time()
+    _network_cache_result = False
     return False
 
 def is_git_corruption_error(combined_output):
@@ -332,12 +346,26 @@ class UpdaterGUI:
         self.progress.pack(pady=5)
         self.progress['value'] = 0
 
+        def get_remote_url():
+            try:
+                # Dynamic lookup to get whatever repo they cloned it from
+                result = subprocess.run(["git", "remote", "get-url", "origin"], cwd=REPO_PATH, capture_output=True, text=True)
+                url = result.stdout.strip()
+                if url.endswith(".git"):
+                    url = url[:-4]
+                return url if url else "https://github.com/JiaLeChye/MobileRobot"
+            except Exception:
+                return "https://github.com/JiaLeChye/MobileRobot"
+
+        repo_url = get_remote_url()
+        readme_url = f"{repo_url}/blob/master/README.md"
+
         self.btn_frame = tk.Frame(self.container)
         self.github_btn = tk.Button(self.btn_frame, text="GitHub", width=15,
-                    command=lambda: webbrowser.open_new_tab("https://github.com/JiaLeChye/MobileRobot"))
+                    command=lambda: webbrowser.open_new_tab(repo_url))
         self.github_btn.pack(side=tk.LEFT, padx=10)
         self.readme_btn = tk.Button(self.btn_frame, text="README.md", width=15,
-                    command=lambda: webbrowser.open_new_tab("https://github.com/JiaLeChye/MobileRobot/blob/master/README.md"))
+                    command=lambda: webbrowser.open_new_tab(readme_url))
         self.readme_btn.pack(side=tk.LEFT, padx=10)
         self.btn_frame.pack(pady=8)
 
@@ -370,7 +398,7 @@ class UpdaterGUI:
         tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.conflict_list_container.pack_forget()
 
-        self.overwrite_btn = tk.Button(self.container, text="Overwrite (Force Update)", fg="white", bg="red",
+        self.overwrite_btn = tk.Button(self.container, text="Keep Local & Update (Stash)", fg="white", bg="blue",
                                        command=self.overwrite_conflicts)
         self.overwrite_btn.pack_forget()
         
@@ -505,18 +533,22 @@ class UpdaterGUI:
         self.root.update_idletasks()
 
     def overwrite_conflicts(self):
-        # Force checkout and pull, discarding local changes
+        # Save local changes, pull, then restore
         try:
-            self.set_status("Overwriting local changes...", progress=90)
-            subprocess.run(["git", "reset", "--hard"], cwd=REPO_PATH, check=True)
-            subprocess.run(["git", "clean", "-fd"], cwd=REPO_PATH, check=True)
+            self.set_status("Saving local changes & updating...", progress=90)
+            # Stash all local modifications AND untracked files
+            subprocess.run(["git", "stash", "-u"], cwd=REPO_PATH, check=False)
+            # Pull the latest cloud changes
             subprocess.run(["git", "pull"], cwd=REPO_PATH, check=True)
-            self.set_status("Repo updated!", progress=100)
-            logging.info("Repo forcibly updated (overwrite mode).")
+            # Attempt to pop the stashed changes back (ignore errors if conflict)
+            subprocess.run(["git", "stash", "pop"], cwd=REPO_PATH, check=False)
+            
+            self.set_status("Repo updated & changes preserved!", progress=100)
+            logging.info("Repo updated using stash-pull-pop mechanism.")
             self.close_after(60)
         except Exception as e:
             self.set_status(f"Error: {e}", progress=100)
-            logging.error(f"Error during overwrite: {e}", exc_info=True)
+            logging.error(f"Error during stash/pull: {e}", exc_info=True)
 
     def close_after(self, seconds):
         self.root.after(int(seconds * 1000), self.root.destroy)

@@ -1,7 +1,13 @@
-## Tensorflow Lite Library
-import tflite_runtime.interpreter as tflite
+## TensorFlow Lite Object Detection
+## Uses ai_edge_litert (new LiteRT package) with fallback to tf.lite.Interpreter
+try:
+    from ai_edge_litert.interpreter import Interpreter as LiteInterpreter
+except ImportError:
+    # Fallback: tf.lite.Interpreter (available in tensorflow>=2.x)
+    import tensorflow as tf
+    LiteInterpreter = tf.lite.Interpreter
 
-## For Image processing 
+## For Image processing
 import cv2
 import numpy as np
 
@@ -9,33 +15,32 @@ import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls, Transform
 
-## For validation of the model and label files 
+## For validation of the model and label files
 import os
 import urllib.request
 import shutil
-import errno
 
-## To get the accurate time 
-import time 
+## To get the accurate time
+import time
 
-## Control the Servo Pan Tilt HAT 
-from RPi_Robot_Hat_Lib import RobotController 
-# Verify the model and label files
+## Control the Servo Pan Tilt HAT
+from RPi_Robot_Hat_Lib import RobotController
+
+
+## ─── Model & label paths ─────────────────────────────────────────────────────
 model_folder = 'tensorflow_lite_examples'
-model_file = 'mobilenet_v2.tflite'
-model_path = os.path.join(model_folder, model_file)
-label_file = 'coco_labels.txt'
-label_path = os.path.join(model_folder, label_file)
+model_file   = 'mobilenet_v2.tflite'
+model_path   = os.path.join(model_folder, model_file)
+label_file   = 'coco_labels.txt'
+label_path   = os.path.join(model_folder, label_file)
 
-# Remote base URL (raw GitHub)
+# Remote base URL (raw GitHub — picamera2 example assets)
 remote_base = 'https://github.com/raspberrypi/picamera2/raw/main/examples/tensorflow'
 
-def ensure_dir_exists(path):
-    try:
-        os.makedirs(path, exist_ok=True)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
+SCORE_THRESHOLD = 0.5   # Minimum confidence to display a detection
+
+
+## ─── File download helper ────────────────────────────────────────────────────
 
 def download_if_missing(local_path, remote_name):
     """Download remote_name from remote_base to local_path if it doesn't exist."""
@@ -43,9 +48,9 @@ def download_if_missing(local_path, remote_name):
         print(f"Found: {local_path}")
         return True
 
-    ensure_dir_exists(os.path.dirname(local_path))
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     remote_url = f"{remote_base}/{remote_name}"
-    print(f"File not found locally: {local_path}\nAttempting to download from: {remote_url}")
+    print(f"File not found locally: {local_path}\nDownloading from: {remote_url}")
     try:
         with urllib.request.urlopen(remote_url) as response, open(local_path, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
@@ -55,7 +60,9 @@ def download_if_missing(local_path, remote_name):
         print(f"Failed to download {remote_name}: {e}")
         return False
 
-# Ensure both files exist (try download if missing)
+
+## ─── Ensure model and label files are present ────────────────────────────────
+
 ok_model = download_if_missing(model_path, model_file)
 ok_label = download_if_missing(label_path, label_file)
 
@@ -67,8 +74,11 @@ if not ok_label:
     print("Label file missing and could not be downloaded. Exiting.")
     exit(1)
 
-# Decode the label file
+
+## ─── Label loader ────────────────────────────────────────────────────────────
+
 def load_labels(path):
+    """Parse the label file and return a dict {class_id: label_name}."""
     labels = {}
     with open(path, 'r', encoding='utf-8') as f:
         for line in f:
@@ -78,108 +88,143 @@ def load_labels(path):
             parts = line.split(maxsplit=1)
             if len(parts) == 2:
                 try:
-                    idx = int(parts[0])
-                    labels[idx] = parts[1]
+                    labels[int(parts[0])] = parts[1]
                 except ValueError:
-                    # Not starting with index, try to use incremental indexing
                     pass
             else:
-                # If the file doesn't contain numeric prefixes, build a list-like mapping
-                # keep adding with next index
                 next_idx = max(labels.keys()) + 1 if labels else 0
                 labels[next_idx] = parts[0]
     return labels
 
+
 labels = load_labels(label_path)
 
 
-## Initialise the Motor Controler Library 
-Motor = RobotController() 
+## ─── Motor and servo initialisation ─────────────────────────────────────────
 
-##  Control the Pna Tilt HAT using the motor controller
-# Set PanTilt and servo channels
-vertical = 2
+Motor = RobotController()
+
+vertical   = 2
 horizontal = 1
-Motor.set_servo(vertical, 80)
+Motor.set_servo(vertical,   80)
 Motor.set_servo(horizontal, 90)
 
-# Start the camera
+
+## ─── Camera setup ────────────────────────────────────────────────────────────
+
 frame_height = 480
-frame_width = 640
+frame_width  = 640
+
 cam = Picamera2()
-cam.configure(cam.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)},transform=Transform(vflip=1)))
+cam.configure(cam.create_preview_configuration(
+    main={"format": 'RGB888', "size": (frame_width, frame_height)},
+    transform=Transform(vflip=1)
+))
 cam.start()
 cam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
 
+## ─── Object detection function ───────────────────────────────────────────────
 
-# Object Detection function
 def object_detection():
-    interpreter = tflite.Interpreter(model_path=model_path)
+    # Use ai_edge_litert (LiteRT) — the successor to tf.lite.Interpreter
+    interpreter = LiteInterpreter(model_path=model_path)
     interpreter.allocate_tensors()
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    height = input_details[0]['shape'][1]
-    width = input_details[0]['shape'][2]
-    
-    
-    while True:
-        frame = cam.capture_array()
-        t_start = time.time()
-        fps = 0
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        resized_frame = cv2.resize(rgb_frame, (width, height))
-        input_data = np.expand_dims(resized_frame, axis=0)
 
-        if input_details[0]['dtype'] == np.float32:
+    input_details  = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+
+    model_height = input_details[0]['shape'][1]
+    model_width  = input_details[0]['shape'][2]
+    is_float     = (input_details[0]['dtype'] == np.float32)
+
+    print('Starting object detection (TFLite). Press q to quit.')
+    t_start = time.time()
+    frame_count = 0
+
+    while True:
+        ## Capture frame
+        # picamera2 RGB888 stores pixels in BGR order in memory — same as OpenCV
+        frame = cam.capture_array()              # BGR (ready for OpenCV display/drawing)
+
+        ## Resize and convert BGR → RGB for TFLite model input
+        resized     = cv2.resize(frame, (model_width, model_height))
+        frame_rgb   = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        input_data  = np.expand_dims(frame_rgb, axis=0)
+
+        ## Normalise to [-1, 1] for float models; uint8 models expect raw [0, 255]
+        if is_float:
             input_data = (np.float32(input_data) - 127.5) / 127.5
 
+        ## Run inference
         interpreter.set_tensor(input_details[0]['index'], input_data)
         interpreter.invoke()
 
-        detected_boxes = interpreter.get_tensor(output_details[0]['index'])[0]
-        detected_classes = interpreter.get_tensor(output_details[1]['index'])[0]
-        detected_scores = interpreter.get_tensor(output_details[2]['index'])[0]
-        num_boxes = int(interpreter.get_tensor(output_details[3]['index'])[0])
+        ## Retrieve outputs
+        detected_boxes   = interpreter.get_tensor(output_details[0]['index'])[0]  # [N, 4]
+        detected_classes = interpreter.get_tensor(output_details[1]['index'])[0]  # [N]
+        detected_scores  = interpreter.get_tensor(output_details[2]['index'])[0]  # [N]
+        num_boxes        = int(interpreter.get_tensor(output_details[3]['index'])[0])
 
+        ## Process detections
         for i in range(num_boxes):
-            if detected_scores[i] > 0.5:
-                ymin, xmin, ymax, xmax = detected_boxes[i]
-                im_height, im_width, _ = frame.shape
-                left = int(xmin * im_width)
-                right = int(xmax * im_width)
-                top = int(ymin * im_height)
-                bottom = int(ymax * im_height)
+            if detected_scores[i] < SCORE_THRESHOLD:
+                continue
 
-                center_x = int((left + right) // 2)
-                center_y = int((top + bottom) // 2)
-                print("Coordinates: ", "\nX: ", center_x, "\nY: ", center_y)
-                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            ymin, xmin, ymax, xmax = detected_boxes[i]
+            im_height, im_width, _ = frame.shape
+            left   = int(xmin * im_width)
+            right  = int(xmax * im_width)
+            top    = int(ymin * im_height)
+            bottom = int(ymax * im_height)
 
-                # Ensure detected class index is within the range of labels
-                class_id = int(detected_classes[i])
-                if class_id in labels:
-                    label = labels[class_id]
-                else:
-                    label = 'Unknown'
+            center_x = (left + right) // 2
+            center_y = (top  + bottom) // 2
 
-                # Debugging output to verify label and class index
-                print(f"Detected class ID: {class_id}, Label: {label}, Score: {detected_scores[i]}")
+            class_id = int(detected_classes[i])
+            label    = labels.get(class_id, 'Unknown')
+            score    = detected_scores[i]
 
-                cv2.putText(frame, label, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2) 
+            print(f"Object: {label}  Score: {score:.2f}  X: {center_x}  Y: {center_y}")
 
-        fps += 1
-        mfps = fps / (time.time() - t_start)
-        cv2.putText(frame, "FPS : " + str(int(mfps)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.imshow("main", frame)
+            ## Draw bounding box and label on the BGR frame
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.putText(frame, f'{label} {score:.0%}', (left, top - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        ## Compute rolling FPS (frames since start / elapsed seconds)
+        frame_count += 1
+        elapsed = time.time() - t_start
+        fps = frame_count / elapsed if elapsed > 0 else 0
+        cv2.putText(frame, f"FPS: {fps:.1f}", (10, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+        ## Display annotated BGR frame
+        cv2.imshow("Object Detection (TFLite)", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-try:
-    if __name__ == '__main__':
+
+## ─── Cleanup & entry point ───────────────────────────────────────────────────
+
+def cleanup():
+    """Release all resources cleanly."""
+    try:
+        Motor.cleanup()
+    except Exception:
+        pass
+    try:
+        cam.stop()
+        cam.close()
+    except Exception:
+        pass
+    cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    try:
         object_detection()
-except KeyboardInterrupt:
-    cam.stop()
-    Motor.cleanup()
-    print("Exiting")
-    exit()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cleanup()

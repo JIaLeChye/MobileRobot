@@ -196,3 +196,15 @@ install_hooks.sh
 VERSION_MANAGEMENT.md
 git-hooks/
 README_MULTILINGUAL.md
+
+# ML model caches — auto-downloaded at runtime, do not commit
+# TF2 SavedModel from TF Hub (Object-Recognition TF edition)
+**/tf_saved_model/
+# Legacy TF1 model folder (Object-Recognition TF edition)
+**/object_detection/
+# TFLite model cache (Object-Recognition TFLite edition)
+**/tflite_model/
+# TFLite model and label files (Object-Recognition TFLite edition)
+**/tensorflow_lite_examples/
+# MediaPipe hand landmarker model (Hand-Gesture)
+**/hand_landmarker.task
