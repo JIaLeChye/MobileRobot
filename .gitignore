@@ -196,3 +196,9 @@ install_hooks.sh
 VERSION_MANAGEMENT.md
 git-hooks/
 README_MULTILINGUAL.md
+Hand-Gesture/hand_landmarker.task
+Object-Recofnition(TF)/tf_saved_model/41234d62d37b576e101fe6e30c7f4ad900e2c43a.descriptor.txt
+Object-Recofnition(TF)/tf_saved_model/mscoco_label_map.pbtxt
+Object-Recofnition(TF)/tf_saved_model/41234d62d37b576e101fe6e30c7f4ad900e2c43a/saved_model.pb
+Object-Recofnition(TF)/tf_saved_model/41234d62d37b576e101fe6e30c7f4ad900e2c43a/variables/variables.data-00000-of-00001
+Object-Recofnition(TF)/tf_saved_model/41234d62d37b576e101fe6e30c7f4ad900e2c43a/variables/variables.index
