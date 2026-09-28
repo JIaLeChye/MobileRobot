@@ -39,10 +39,34 @@ jobs:
         CUR_VERSION=$(grep '__version__ = ' version.py | sed 's/__version__ = "\(.*\)"/\1/')
         echo "Current version: $CUR_VERSION"
         
-        # Increment PATCH version (X.Y.Z -> X.Y.(Z+1))
+        # Determine what changed to decide version bump
+        CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || git diff --name-only HEAD)
+        NUM_FILES=$(echo "$CHANGED_FILES" | grep -c "^" || true)
+        
+        # Check if any brand new folders were introduced (heuristic: check for tree changes)
+        # We can also just count directories affected. We'll use >1 directory as a "folder" change.
+        NUM_FOLDERS=$(echo "$CHANGED_FILES" | grep '/' | awk -F/ '{print $1}' | sort -u | wc -l)
+        
+        echo "Files changed: $NUM_FILES"
+        echo "Top-level folders affected: $NUM_FOLDERS"
+        
         IFS='.' read -r major minor patch <<< "$CUR_VERSION"
-        NEW_PATCH=$((patch + 1))
-        NEW_VERSION="${major}.${minor}.${NEW_PATCH}"
+        
+        if [ "$NUM_FILES" -ge 8 ] || [ "$NUM_FOLDERS" -ge 2 ]; then
+          echo "Major update: $NUM_FILES files and $NUM_FOLDERS folders changed."
+          major=$((major + 1))
+          minor=0
+          patch=0
+        elif [ "$NUM_FILES" -ge 4 ]; then
+          echo "Minor update: $NUM_FILES files changed."
+          minor=$((minor + 1))
+          patch=0
+        else
+          echo "Patch update: $NUM_FILES files changed."
+          patch=$((patch + 1))
+        fi
+        
+        NEW_VERSION="${major}.${minor}.${patch}"
         echo "New version: $NEW_VERSION"
         
         # Update version.py
