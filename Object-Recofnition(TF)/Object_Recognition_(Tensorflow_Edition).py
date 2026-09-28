@@ -1,6 +1,9 @@
 
 ## Object detection and image processing 
-import tensorflow as tf 
+import tensorflow as tf
+# TF2 compatibility shim: object_detection utilities still reference tf.gfile (TF1 API)
+if not hasattr(tf, 'gfile'):
+    tf.gfile = tf.io.gfile
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils 
 import object_detection as od_pkg

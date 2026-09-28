@@ -1,19 +1,14 @@
-name: Auto Release
-
-# This workflow controls version.py and creates project releases
-# It ONLY runs when commit messages contain "release" keyword
-# Library versions are handled by library-version-updater.yml
+name: Auto Increment Version
 
 on:
   push:
     branches: [ master, main ]
 
 jobs:
-  auto-release:
+  auto-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     
     steps:
     - uses: actions/checkout@v4
@@ -22,76 +17,57 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         persist-credentials: true
     
-    - name: Check release trigger and version
-      id: release_check
-      run: |
-        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-        AUTHOR=$(git log -1 --pretty=%an)
-        echo "Commit message: $COMMIT_MESSAGE"
-        echo "Author: $AUTHOR"
-        # Skip if commit was made by any bot
-        if [[ "$AUTHOR" == *"Bot"* ]] || [[ "$AUTHOR" == *"bot"* ]]; then
-          echo "should_release=false" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        # Skip if commit message indicates it's already a version/release commit
-        if [[ "$COMMIT_MESSAGE" == *"🚀 Release"* ]] || [[ "$COMMIT_MESSAGE" == *"🔖 Auto-update"* ]]; then
-          echo "should_release=false" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        # Extract version from commit message (e.g. release 2.0.12)
-        if [[ "$COMMIT_MESSAGE" =~ [Rr]elease[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+) ]]; then
-          REQ_VERSION="${BASH_REMATCH[1]}"
-          echo "Requested release version: $REQ_VERSION"
-          CUR_VERSION=$(grep '__version__ = ' version.py | sed 's/__version__ = "\(.*\)"/\1/')
-          echo "Current version: $CUR_VERSION"
-          # Compare versions (function: returns 0 if $1 > $2)
-          version_gt() {
-            [ "$1" = "$2" ] && return 1
-            local IFS=.
-            local i ver1=($1) ver2=($2)
-            # fill empty fields in ver1 with zeros
-            for ((i=${#ver1[@]}; i<3; i++)); do ver1[i]=0; done
-            for ((i=${#ver2[@]}; i<3; i++)); do ver2[i]=0; done
-            for ((i=0; i<3; i++)); do
-              if ((10#${ver1[i]} > 10#${ver2[i]})); then return 0; fi
-              if ((10#${ver1[i]} < 10#${ver2[i]})); then return 1; fi
-            done
-            return 1
-          }
-          if version_gt "$REQ_VERSION" "$CUR_VERSION"; then
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "release_version=$REQ_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "should_release=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "should_release=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Release and sync version
+    - name: Increment Version
       run: |
         set -e
+        
+        # Check if the commit message contains the keyword "Update"
+        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+        if [[ ! "$COMMIT_MESSAGE" =~ [Uu]pdate ]]; then
+          echo "No 'Update' keyword found in commit message. Skipping version increment."
+          exit 0
+        fi
+        
+        # Skip if this commit was made by the bot
+        COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+        if [[ "$COMMIT_AUTHOR" == *"Bot"* ]] || [[ "$COMMIT_AUTHOR" == *"bot"* ]]; then
+          echo "Commit made by bot, skipping version increment to prevent loop."
+          exit 0
+        fi
+        
+        # Read current version from version.py
         CUR_VERSION=$(grep '__version__ = ' version.py | sed 's/__version__ = "\(.*\)"/\1/')
+        echo "Current version: $CUR_VERSION"
+        
+        # Increment PATCH version (X.Y.Z -> X.Y.(Z+1))
+        IFS='.' read -r major minor patch <<< "$CUR_VERSION"
+        NEW_PATCH=$((patch + 1))
+        NEW_VERSION="${major}.${minor}.${NEW_PATCH}"
+        echo "New version: $NEW_VERSION"
+        
+        # Update version.py
+        sed -i "s/__version__ = \"$CUR_VERSION\"/__version__ = \"$NEW_VERSION\"/" version.py
+        
+        # Update README badge
         README_VERSION=$(grep -o 'version-[0-9]\+\.[0-9]\+\.[0-9]\+-blue' README.md | head -1 | sed 's/version-\(.*\)-blue/\1/')
-        echo "Current version.py: $CUR_VERSION"
-        echo "Current README.md badge: $README_VERSION"
-        if [[ "${{ steps.release_check.outputs.should_release }}" == 'true' ]]; then
-          NEW_VERSION="${{ steps.release_check.outputs.release_version }}"
-          echo "Triggering release for version: $NEW_VERSION"
-          # Update version.py
-          sed -i "s/__version__ = \"$CUR_VERSION\"/__version__ = \"$NEW_VERSION\"/" version.py
-          # Update README badge
-          sed -i "s/version-$CUR_VERSION-blue/version-$NEW_VERSION-blue/" README.md
-          git config --global user.email "action@github.com"
-          git config --global user.name "Release Bot"
-          git config --global pull.rebase false
-          git add version.py README.md
-          git commit -m "🚀 Release v$NEW_VERSION" || exit 0
-          git tag "v$NEW_VERSION"
+        if [ -n "$README_VERSION" ]; then
+          sed -i "s/version-$README_VERSION-blue/version-$NEW_VERSION-blue/" README.md
+        fi
+        
+        # Configure Git
+        git config --global user.email "action@github.com"
+        git config --global user.name "Version Bot"
+        git config --global pull.rebase false
+        
+        # Commit and push
+        git add version.py README.md
+        
+        if ! git diff --cached --quiet; then
+          git commit -m "🔖 Auto-increment version to v$NEW_VERSION [skip ci]"
+          
           for i in {1..3}; do
-            if git push origin HEAD:${{ github.ref_name }} && git push origin "v$NEW_VERSION"; then
-              echo "✅ Successfully pushed release v$NEW_VERSION"
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "✅ Successfully pushed version update v$NEW_VERSION"
               break
             else
               echo "❌ Push attempt $i failed, retrying..."
@@ -101,27 +77,5 @@ jobs:
             fi
           done
         else
-          # On non-release commits, auto-sync README version badge to version.py
-          if [[ "$CUR_VERSION" != "$README_VERSION" ]]; then
-            echo "Syncing README.md badge to version.py: $CUR_VERSION"
-            sed -i "s/version-$README_VERSION-blue/version-$CUR_VERSION-blue/" README.md
-            git config --global user.email "action@github.com"
-            git config --global user.name "Version Sync Bot"
-            git config --global pull.rebase false
-            git add README.md
-            git commit -m "🔄 Sync README version badge to $CUR_VERSION" || exit 0
-            for i in {1..3}; do
-              if git push origin HEAD:${{ github.ref_name }}; then
-                echo "✅ Successfully pushed README badge sync"
-                break
-              else
-                echo "❌ Push attempt $i failed, retrying..."
-                git fetch origin ${{ github.ref_name }}
-                git pull origin ${{ github.ref_name }}
-                sleep 2
-              fi
-            done
-          else
-            echo "README.md badge and version.py are already in sync."
-          fi
+          echo "No files needed updating."
         fi

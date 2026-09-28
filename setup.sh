@@ -62,7 +62,7 @@ install_local_if_needed() {
         return 0
     fi
     echo "  -> Installing $dist (local version: ${local_ver:-unknown}, installed: ${installed_ver:-none})"
-    ( cd "$dir" && sudo pip3 install . --break-system-packages ) || return 1
+    ( cd "$dir" && sudo pip3 install . --ignore-installed --break-system-packages ) || return 1
 }
 
 echo "=============================================================="
@@ -226,7 +226,7 @@ PY
             echo "     (already installed: $pkg_base) - skipping"
             continue
         fi
-        if sudo pip3 install "$clean_pkg" --break-system-packages; then
+        if sudo pip3 install "$clean_pkg" --ignore-installed --break-system-packages; then
             success_pkgs+=("$clean_pkg")
         else
             fail_pkgs+=("$clean_pkg")
